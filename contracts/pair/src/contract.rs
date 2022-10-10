@@ -1,11 +1,13 @@
-use cosmwasm_std::{Addr, DepsMut, Env, MessageInfo, Reply, ReplyOn, Response, SubMsg, to_binary, WasmMsg};
-use cw20::MinterResponse;
+use cosmwasm_std::{Addr, Decimal, DepsMut, Env, from_binary, MessageInfo, Reply, ReplyOn, Response, SubMsg, to_binary, WasmMsg};
+use cw20::{Cw20ReceiveMsg, MinterResponse};
 use cw20_base::msg::InstantiateMsg as Cw20InstantiateMsg;
 use cw2::set_contract_version;
-use ysip::asset::format_lp_token_name;
-use ysip::pair::{InstantiateMsg, PairInfo};
+use ysip::asset::{Asset, AssetInfo, format_lp_token_name};
+use ysip::pair::{ExecuteMsg, InstantiateMsg, PairInfo, Cw20HookMsg};
+use ysip::querier::query_token_precision;
 use crate::error::ContractError;
 use crate::state::{Config, CONFIG};
+use crate::utils::compute_swap;
 
 const CONTRACT_NAME: &str = "ysip-pair-contract";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -77,4 +79,96 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractE
     CONFIG.save(deps.storage, &config)?;
 
     Ok(Response::new().add_attribute("liquidity_token_addr", config.pair_info.liquidity_token))
+}
+
+pub struct SwapParams {
+    offer_asset: Asset,
+    belief_price: Option<Decimal>,
+    max_spread: Option<Decimal>,
+    to: Option<Addr>,
+}
+
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn execute(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    msg: ExecuteMsg,
+) -> Result<Response, ContractError> {
+    match msg {
+        ExecuteMsg::Receive(msg) => receive_cw20(deps, env, info, msg),
+        ExecuteMsg::ProvideLiquidity { assets, receiver } => unimplemented!(),
+        ExecuteMsg::Swap { offer_asset, belief_price, max_spread, to } => unimplemented!()
+    }
+}
+
+fn receive_cw20(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    msg: Cw20ReceiveMsg,
+) -> Result<Response, ContractError> {
+    match from_binary(&msg.msg) {
+        Ok(Cw20HookMsg::Swap {
+               belief_price,
+               max_spread,
+               to
+           }) => {
+            let mut authorized = false;
+            let config: Config = CONFIG.load(deps.storage)?;
+
+            config.pair_info.asset_infos.into_iter().for_each(|asset_info| {
+                if let AssetInfo::Token { contract_addr } = &asset_info {
+                    if contract_addr == &info.sender {
+                        authorized = true;
+                    }
+                }
+            });
+
+            if !authorized {
+                return Err(ContractError::Unauthorized {});
+            }
+
+            let to_addr = if let Some(to_addr) = to {
+                Some(deps.api.addr_validate(to_addr.as_str())?)
+            } else {
+                None
+            };
+
+            let sender = deps.api.addr_validate(msg.sender.as_str())?;
+
+            swap(
+                deps,
+                env,
+                info,
+                sender,
+                SwapParams {
+                    offer_asset: Asset {
+                        info: AssetInfo::Token { contract_addr },
+                        amount: msg.amount,
+                    },
+                    belief_price,
+                    max_spread,
+                    to: to_addr,
+                },
+            )
+        }
+        Ok(Cw20HookMsg::WithdrawLiquidity {}) => {
+            withdraw_liquidity(deps, env, info, Addr::unchecked(msg.sender), msg.amount)
+        }
+        Err(err) => Err(ContractError::Std(err))
+    }
+}
+
+fn swap(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    sender: Addr,
+    params: SwapParams,
+) -> Result<Response, ContractError> {
+    params.offer_asset.assert_sent_native_token_balance(&info)?;
+    let mut config = CONFIG.load(deps.storage)?;
+
+    Ok(Response::new())
 }
