@@ -1,0 +1,2 @@
+[alias]
+clippy-warnings = "clippy --all-targets -- --D warnings"
