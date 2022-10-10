@@ -1,4 +1,5 @@
 use cosmwasm_std::StdError;
+use thiserror::Error;
 
 #[derive(Error, Debug, PartialEq)]
 pub enum ContractError {
@@ -10,4 +11,10 @@ pub enum ContractError {
 
     #[error("Unauthorized")]
     Unauthorized {},
+
+    #[error("Not enough liquidity")]
+    NotEnoughLiquidity {},
+
+    #[error("Asset Mismatch")]
+    AssetMismatch {},
 }
