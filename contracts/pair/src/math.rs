@@ -1,6 +1,6 @@
 use crate::state::FEE_SCALE_FACTOR;
 use crate::utils::fee_decimal_to_uint128;
-use cosmwasm_std::{Decimal, StdError, StdResult, Uint128, Uint512};
+use cosmwasm_std::{Decimal, StdError, StdResult, Uint128, Uint256, Uint512};
 
 pub fn get_input_price(
     input_amount: Uint128,
@@ -30,6 +30,20 @@ pub fn get_input_price(
 
     Ok(numerator
         .checked_div(denominator)
+        .map_err(StdError::divide_by_zero)?
+        .try_into()?)
+}
+
+
+pub fn get_protocol_fee_amount(input_amount: Uint128, fee_percent: Decimal) -> StdResult<Uint128> {
+    if fee_percent.is_zero() {
+        return Ok(Uint128::zero());
+    }
+
+    let fee_percent = fee_decimal_to_uint128(fee_percent)?;
+    Ok(input_amount
+        .full_mul(fee_percent)
+        .checked_div(Uint256::from(FEE_SCALE_FACTOR))
         .map_err(StdError::divide_by_zero)?
         .try_into()?)
 }

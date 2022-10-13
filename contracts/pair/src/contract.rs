@@ -1,5 +1,5 @@
 use crate::error::ContractError;
-use crate::math::get_input_price;
+use crate::math::{get_input_price, get_protocol_fee_amount};
 use crate::state::{Config, Fees, CONFIG};
 use cosmwasm_std::{
     entry_point, from_binary, to_binary, Addr, Decimal, DepsMut, Env, MessageInfo, Reply, ReplyOn,
@@ -64,7 +64,7 @@ pub fn instantiate(
             funds: vec![],
             label: "YSIP LP token".to_string(),
         }
-        .into(),
+            .into(),
         gas_limit: None,
         reply_on: ReplyOn::Success,
     };
@@ -119,10 +119,10 @@ fn receive_cw20(
 
     match from_binary(&msg.msg) {
         Ok(Cw20HookMsg::Swap {
-            belief_price,
-            max_spread,
-            to,
-        }) => {
+               belief_price,
+               max_spread,
+               to,
+           }) => {
             let mut authorized = false;
             let config: Config = CONFIG.load(deps.storage)?;
 
@@ -213,12 +213,21 @@ fn swap(
     let fees = config.fees;
     let total_fee_percent = fees.lp_fee_percent + fees.protocol_fee_percent;
 
-    let token_bought = get_input_price(
+    let token_bought_price = get_input_price(
         params.offer_asset.amount,
         offer_pool.amount,
         ask_pool.amount,
         total_fee_percent,
     )?;
+
+    params.assert_min_token_bought(Decimal::new(token_bought_price))?;
+
+    let protocol_fee_amount = get_protocol_fee_amount(params.offer_asset.amount, fees.protocol_fee_percent)?;
+    let net_input_amount = params.offer_asset.amount - protocol_fee_amount;
+
+    let mut msgs = match params.offer_asset.info.clone() {
+        _ => vec![]
+    };
 
     Ok(Response::new())
 }
