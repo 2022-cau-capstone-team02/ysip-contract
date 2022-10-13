@@ -53,3 +53,10 @@ pub fn query_token_precision(querier: &QuerierWrapper, asset_info: AssetInfo) ->
         }
     })
 }
+
+pub fn query_lp_token_supply(querier: &QuerierWrapper, lp_token_addr: Addr) -> StdResult<Uint128> {
+    let resp: TokenInfoResponse = deps
+        .querier
+        .query_wasm_smart(lp_token_addr, &cw20_base::msg::QueryMsg::TokenInfo {})?;
+    Ok(resp.total_supply)
+}

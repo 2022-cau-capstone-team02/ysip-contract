@@ -1,12 +1,10 @@
 use crate::error::ContractError;
 use crate::math::{get_input_price, get_protocol_fee_amount};
 use crate::state::{Config, Fees, CONFIG};
-use cosmwasm_std::{
-    entry_point, from_binary, to_binary, Addr, Decimal, DepsMut, Env, MessageInfo, Reply, ReplyOn,
-    Response, SubMsg, WasmMsg,
-};
+use cosmwasm_std::{entry_point, from_binary, to_binary, Addr, Decimal, DepsMut, Env, MessageInfo, Reply, ReplyOn, Response, SubMsg, WasmMsg, Uint128, StdError, CosmosMsg};
 use cw2::set_contract_version;
-use cw20::{Cw20ReceiveMsg, MinterResponse};
+use cw20::{Cw20ReceiveMsg, Denom, MinterResponse};
+use cw20::Denom::Cw20;
 use cw20_base::msg::InstantiateMsg as Cw20InstantiateMsg;
 use ysip::asset::{format_lp_token_name, Asset, AssetInfo};
 use ysip::pair::{Cw20HookMsg, ExecuteMsg, InstantiateMsg, PairInfo, SwapParams};
@@ -230,4 +228,122 @@ fn swap(
     };
 
     Ok(Response::new())
+}
+
+fn get_lp_token_amount_to_mint(
+    token1_amount: Uint128,
+    liquidity_supply: Uint128,
+    token1_reserve: Uint128,
+) -> Result<Uint128, ContractError> {
+    if liquidity_supply == Uint128::zero() {
+        Ok(token1_amount)
+    } else {
+        Ok(token1_amount
+            .checked_mul(liquidity_supply)
+            .map_err(StdError::overflow)?
+            .checked_div(token1_reserve)
+            .map_err(StdError::divide_by_zero)?)
+    }
+}
+
+fn get_token2_amount_required(
+    max_token: Uint128,
+    token1_amount: Uint128,
+    liquidity_supply: Uint128,
+    token2_reserve: Uint128,
+    token1_reserve: Uint128,
+) -> Result<Uint128, StdError> {
+    if liquidity_supply == Uint128::zero() {
+        Ok(max_token)
+    } else {
+        Ok(token1_amount
+            .checked_mul(token2_reserve)
+            .map_err(StdError::overflow)?
+            .checked_div(token1_reserve)
+            .map_err(StdError::divide_by_zero)?
+            .checked_add(Uint128::new(1))
+            .map_err(StdError::overflow)?)
+    }
+}
+
+fn provide_liquidity(
+    deps: DepsMut,
+    info: MessageInfo,
+    env: Env,
+    assets: [Asset; 2],
+) -> Result<Response, ContractError> {
+    msg.asset_infos[0].check_is_valid(deps.api)?;
+    msg.asset_infos[1].check_is_valid(deps.api)?;
+
+    for asset in assets {
+        asset.assert_sent_native_token_balance(&info)?;
+    }
+
+    let config = CONFIG.load(deps.storage)?;
+
+    let pools: [Asset; 2] = config
+        .pair_info
+        .query_pools(&deps.querier, env.contract.address)?;
+
+    let mut deposits: [Uint128; 2] = [
+        assets
+            .iter()
+            .find(|a| a.info.equal(&pools[0].info))
+            .map(|a| a.amount)
+            .expect("Wrong asset info is given"),
+        assets
+            .iter()
+            .find(|a| a.info.equal(&pools[1].info))
+            .map(|a| a.amount)
+            .expect("Wrong asset info is given"),
+    ];
+
+    if deposits[0].is_zero() && deposits[1].is_zero() {
+        return Err(ContractError::InvalidZeroAmount {});
+    }
+
+    let lp_token_supply = get_lp_token_supply(deps.as_ref(), &lp_token_addr)?;
+    let liquidity_amount = get_lp_token_amount_to_mint(
+        deposits[0],
+        lp_token_supply,
+        assets[0].amount);
+
+    let token2_amount = get_token2_amount_required(
+        deposits[1],
+        deposits[0],
+        lp_token_supply,
+        assets[1].amount,
+        assets[0].amount,
+    )?;
+
+    let mut transfer_msgs: Vec<CosmosMsg> = vec![];
+    if let AssetInfo::Token(addr) = assets[0].clone().info {
+        transfer_msgs.push(get_cw20_transfer_from_msg(
+            &info.sender,
+            &env.contract.address,
+            &addr,
+            deposits[0],
+        )?)
+    }
+
+    if let AssetInfo::Token(addr) = assets[1].clone().info {
+        transfer_msgs.push(get_cw20_transfer_from_msg(
+            &info.sender,
+            &env.contract.address,
+            &addr,
+            deposits[1],
+        )?)
+    }
+
+    if let AssetInfo::NativeToken(denom) = assets[1].clone().info {
+        if token2_amount < max_token2 {
+            transfer_msgs.push(get_bank_transfer_to_msg(
+                &info.sender,
+                &denom,
+                max_token2 - token2_amount,
+            ))
+        }
+    }
+
+    Ok()
 }
