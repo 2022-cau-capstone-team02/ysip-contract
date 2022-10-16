@@ -1,9 +1,9 @@
-use std::str::FromStr;
 use crate::asset::{Asset, AssetInfo};
 use cosmwasm_std::{Addr, Decimal, QuerierWrapper, StdError, StdResult};
 use cw20::Cw20ReceiveMsg;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use std::str::FromStr;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InstantiateMsg {
@@ -15,8 +15,8 @@ pub struct InstantiateMsg {
     pub factory_addr: String,
     /// Address that recieves protocol fee
     pub protocol_fee_recipient: String,
-    pub protocol_fee_percent: Decimal,
-    pub lp_fee_percent: Decimal,
+    pub protocol_fee_percent: String,
+    pub lp_fee_percent: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -68,8 +68,8 @@ pub enum ExecuteMsg {
     /// Swap operation
     Swap {
         offer_asset: Asset,
-        belief_price: Option<Decimal>,
-        max_spread: Option<Decimal>,
+        min_output_amount: Option<String>,
+        max_spread: Option<String>,
         to: Option<String>,
     },
 }
@@ -79,7 +79,7 @@ pub enum ExecuteMsg {
 pub enum Cw20HookMsg {
     /// Swap a given amount of asset
     Swap {
-        belief_price: Option<String>,
+        min_output_amount: Option<String>,
         max_spread: Option<String>,
         to: Option<String>,
     },
@@ -89,19 +89,26 @@ pub enum Cw20HookMsg {
 
 pub struct SwapParams {
     pub offer_asset: Asset,
-    pub belief_price: Option<String>,
+    pub min_output_amount: Option<String>,
     pub max_spread: Option<String>,
     pub to: Option<Addr>,
 }
 
 impl SwapParams {
-    pub fn assert_min_token_bought(&self, true_price: Decimal) -> StdResult<()> {
-        match &self.belief_price {
-            Some(belief_price) => {
-                let belief_price_decimal = Decimal::from_str(belief_price.as_ref()).map_err(|_| StdError::generic_err("conversion failed"))?;
+    pub fn assert_min_token_bought(&self, true_amount: Decimal) -> StdResult<()> {
+        match &self.min_output_amount {
+            Some(min_output_amount) => {
+                let min_output_amount_decimal = Decimal::from_str(min_output_amount.as_ref())
+                    .map_err(|_| StdError::generic_err("conversion failed"))?;
+
                 if let Some(max_spread) = &self.max_spread {
-                    let max_spread_decimal = Decimal::from_str(max_spread.as_ref()).map_err(|_| StdError::generic_err("conversion failed"))?;
-                    let ratio = true_price.checked_div(belief_price_decimal).map_err(|_| StdError::generic_err("failed to divide"))?;
+                    let max_spread_decimal = Decimal::from_str(max_spread.as_ref())
+                        .map_err(|_| StdError::generic_err("conversion failed"))?
+                        .checked_div(Decimal::from_str("100").unwrap())
+                        .map_err(|_| StdError::generic_err("overflow"))?;
+                    let ratio = true_amount
+                        .checked_div(min_output_amount_decimal)
+                        .map_err(|_| StdError::generic_err("failed to divide"))?;
                     if ratio.gt(&max_spread_decimal.checked_add(Decimal::one()).unwrap()) {
                         Err(StdError::generic_err("max spread error"))
                     } else {
@@ -111,18 +118,26 @@ impl SwapParams {
                     Ok(())
                 }
             }
-            None => Ok(())
+            None => Ok(()),
         }
     }
 
-    pub fn assert_min_token_sold(&self, true_price: Decimal) -> StdResult<()> {
-        match &self.belief_price {
-            Some(belief_price) => {
-                let belief_price_decimal = Decimal::from_str(belief_price.as_ref()).map_err(|_| StdError::generic_err("conversion failed"))?;
+    pub fn assert_min_token_sold(&self, true_amount: Decimal) -> StdResult<()> {
+        match &self.min_output_amount {
+            Some(min_output_amount) => {
+                let min_output_amount_decimal = Decimal::from_str(min_output_amount.as_ref())
+                    .map_err(|_| StdError::generic_err("conversion failed"))?;
                 if let Some(max_spread) = &self.max_spread {
-                    let max_spread_decimal = Decimal::from_str(max_spread.as_ref()).map_err(|_| StdError::generic_err("conversion failed"))?;
-                    let ratio = true_price.checked_div(belief_price_decimal).map_err(|_| StdError::generic_err("failed to divide"))?;
-                    let temp = Decimal::one().checked_sub(max_spread_decimal).map_err(|_| StdError::generic_err("overflow"))?;
+                    let max_spread_decimal = Decimal::from_str(max_spread.as_ref())
+                        .map_err(|_| StdError::generic_err("conversion failed"))?
+                        .checked_div(Decimal::from_str("100").unwrap())
+                        .map_err(|_| StdError::generic_err("overflow"))?;
+                    let ratio = true_amount
+                        .checked_div(min_output_amount_decimal)
+                        .map_err(|_| StdError::generic_err("failed to divide"))?;
+                    let temp = Decimal::one()
+                        .checked_sub(max_spread_decimal)
+                        .map_err(|_| StdError::generic_err("overflow"))?;
                     if ratio.gt(&temp) || ratio.eq(&temp) {
                         Ok(())
                     } else {
@@ -132,51 +147,46 @@ impl SwapParams {
                     Ok(())
                 }
             }
-            None => Ok(())
+            None => Ok(()),
         }
     }
 }
 
-
 #[cfg(test)]
 pub mod test_swap {
-    use std::str::FromStr;
-    use cosmwasm_std::{Addr, Decimal, Uint128};
     use crate::asset::{Asset, AssetInfo};
     use crate::pair::SwapParams;
+    use cosmwasm_std::{Addr, Decimal, Uint128};
+    use std::str::FromStr;
 
     #[test]
     fn test() {
         let sp = SwapParams {
             offer_asset: Asset {
                 info: AssetInfo::Token {
-                    contract_addr: Addr::unchecked("")
+                    contract_addr: Addr::unchecked(""),
                 },
                 amount: Uint128::new(10000),
             },
-            belief_price: Some("100".to_string()),
-            max_spread: Some("0.05".to_string()),
+            min_output_amount: Some("100".to_string()),
+            max_spread: Some("5".to_string()),
             to: Some(Addr::unchecked("")),
         };
 
         // success
-        sp.assert_min_token_bought(
-            Decimal::from_str("105").unwrap()
-        ).unwrap();
+        sp.assert_min_token_bought(Decimal::from_str("105").unwrap())
+            .unwrap();
 
         // fail
-        sp.assert_min_token_bought(
-            Decimal::from_str("106").unwrap()
-        ).unwrap_err();
+        sp.assert_min_token_bought(Decimal::from_str("106").unwrap())
+            .unwrap_err();
 
         // success
-        sp.assert_min_token_sold(
-            Decimal::from_str("95").unwrap()
-        ).unwrap();
+        sp.assert_min_token_sold(Decimal::from_str("95").unwrap())
+            .unwrap();
 
         // fail
-        sp.assert_min_token_sold(
-            Decimal::from_str("94").unwrap()
-        ).unwrap_err();
+        sp.assert_min_token_sold(Decimal::from_str("94").unwrap())
+            .unwrap_err();
     }
 }

@@ -9,4 +9,3 @@ pub fn fee_decimal_to_uint128(fee_percent: Decimal) -> StdResult<Uint128> {
 
     Ok(result / FEE_DECIMAL_PRECISION)
 }
-

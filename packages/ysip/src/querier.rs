@@ -1,8 +1,6 @@
-use cosmwasm_std::{
-    to_binary, Addr, QuerierWrapper, QueryRequest, StdResult, Uint128, WasmQuery,
-};
-use cw20::{BalanceResponse as Cw20BalanceResponse, Cw20QueryMsg, TokenInfoResponse};
 use crate::asset::AssetInfo;
+use cosmwasm_std::{to_binary, Addr, QuerierWrapper, QueryRequest, StdResult, Uint128, WasmQuery};
+use cw20::{BalanceResponse as Cw20BalanceResponse, Cw20QueryMsg, TokenInfoResponse};
 
 pub const NATIVE_TOKEN_PRECISION: u8 = 6;
 
@@ -55,8 +53,7 @@ pub fn query_token_precision(querier: &QuerierWrapper, asset_info: AssetInfo) ->
 }
 
 pub fn query_lp_token_supply(querier: &QuerierWrapper, lp_token_addr: Addr) -> StdResult<Uint128> {
-    let resp: TokenInfoResponse = deps
-        .querier
-        .query_wasm_smart(lp_token_addr, &cw20_base::msg::QueryMsg::TokenInfo {})?;
+    let resp: TokenInfoResponse =
+        querier.query_wasm_smart(lp_token_addr, &cw20_base::msg::QueryMsg::TokenInfo {})?;
     Ok(resp.total_supply)
 }
