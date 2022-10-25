@@ -14,15 +14,15 @@ backtraces = ["cosmwasm-std/backtraces", "cosmwasm-vm/backtraces"]
 library = []
 
 [dependencies]
-cw2 = "0.15.1"
-cw20 = "0.15.1"
-cw20-base = {version = "0.15.1", features = ["library"]}
-cosmwasm-std = "1.1.2"
+cw2 = "0.13.4"
+cw20 = "0.13.4"
+cw20-base = {version = "0.13.4", features = ["library"]}
+cosmwasm-std = { version = "1.0.0" }
 schemars = "0.8.10"
 serde = { version = "1.0.145", default-features = false, features = ["derive"] }
 thiserror = "1.0.37"
-cw-storage-plus = "0.15.1"
-cw-utils = "0.15.1"
+cw-storage-plus = "0.13.4"
+cw-utils = "0.13.4"
 ysip = { path = "../../packages/ysip", default-features = false }
 
 [dev-dependencies]

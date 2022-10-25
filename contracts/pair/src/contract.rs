@@ -1,13 +1,10 @@
 use crate::error::ContractError;
 use crate::math::{get_lp_fee_amount, get_protocol_fee_amount, get_swap_output_amount};
 use crate::state::{Config, Fees, Liquidity, CONFIG, LIQUIDITY};
-use cosmwasm_std::{
-    attr, entry_point, from_binary, to_binary, Addr, Decimal, DepsMut, Env, MessageInfo, Reply,
-    ReplyOn, Response, StdError, SubMsg, Uint128, WasmMsg,
-};
+use cosmwasm_std::{attr, entry_point, from_binary, to_binary, Addr, Decimal, DepsMut, Env, MessageInfo, Reply, ReplyOn, Response, StdError, SubMsg, Uint128, WasmMsg, StdResult, Binary, Deps};
 use cw2::set_contract_version;
 use cw20::{Cw20ReceiveMsg, MinterResponse};
-use cw20_base::msg::InstantiateMsg as Cw20InstantiateMsg;
+use cw20_base::msg::{InstantiateMsg as Cw20InstantiateMsg, QueryMsg};
 use std::str::FromStr;
 use ysip::asset::{format_lp_token_name, Asset, AssetInfo};
 use ysip::pair::{Cw20HookMsg, ExecuteMsg, InstantiateMsg, PairInfo, SwapParams};
@@ -165,7 +162,7 @@ fn receive_cw20(
                 None
             };
 
-            // let sender = deps.api.addr_validate(msg.sender.as_str())?;
+            let sender = deps.api.addr_validate(msg.sender.as_str())?;
 
             swap(
                 deps,
@@ -430,3 +427,8 @@ fn get_token2_amount_required(
 //
 //     Ok(Response::new())
 // }
+
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
+    Ok(Binary::default())
+}
