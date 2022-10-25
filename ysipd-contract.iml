@@ -8,11 +8,14 @@
       <sourceFolder url="file://$MODULE_DIR$/contracts/token/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/packages/ysip/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/packages/testing-base/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/testing/src" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
       <excludeFolder url="file://$MODULE_DIR$/contracts/token/target" />
       <excludeFolder url="file://$MODULE_DIR$/contracts/pair/target" />
       <excludeFolder url="file://$MODULE_DIR$/contracts/factory/target" />
       <excludeFolder url="file://$MODULE_DIR$/packages/ysip/target" />
+      <excludeFolder url="file://$MODULE_DIR$/testing/target" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
