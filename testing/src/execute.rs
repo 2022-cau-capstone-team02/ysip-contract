@@ -1,8 +1,9 @@
-use cosmwasm_std::{Attribute, Coin, coin, to_binary, Uint128};
+use cosmwasm_std::{Addr, Attribute, Coin, coin, to_binary, Uint128};
 use cw20::{Cw20ExecuteMsg};
 use cw20::Cw20ReceiveMsg;
 use cw_multi_test::BasicApp;
 use testing_base::execute::execute_contract;
+use ysip::asset::{Asset, AssetInfo};
 use ysip::pair::{Cw20HookMsg, ExecuteMsg};
 
 pub fn execute_mint(
@@ -14,7 +15,7 @@ pub fn execute_mint(
 ) -> Vec<Attribute> {
     let mint_msg = Cw20ExecuteMsg::Mint {
         recipient: recipient.to_string(),
-        amount: Uint128::new(amount)
+        amount: Uint128::new(amount),
     };
 
     execute_contract(
@@ -22,8 +23,34 @@ pub fn execute_mint(
         contract_addr,
         &mint_msg,
         &[],
-        admin
+        admin,
     ).unwrap()
+}
+
+pub fn execute_provide_liquidity(
+    app: &mut BasicApp,
+    native_token_denom: &str,
+    token_contract_addr: &str,
+    sender: &str,
+) -> Vec<Attribute> {
+    let provide_liquidity_msg = ExecuteMsg::ProvideLiquidity {
+        assets: [
+            Asset {
+                info: AssetInfo::Token {
+                    contract_addr: Addr::unchecked(token_contract_addr)
+                },
+                amount: Uint128::new(10),
+            },
+            Asset {
+                info: AssetInfo::NativeToken {
+                    denom: native_token_denom.to_string()
+                },
+                amount: Uint128::new(5)
+            }
+        ],
+    };
+
+
 }
 
 pub fn execute_swap(
@@ -38,8 +65,8 @@ pub fn execute_swap(
         msg: to_binary(&Cw20HookMsg::Swap {
             min_output_amount: Some("0".to_string()),
             max_spread: Some("100".to_string()),
-            to: Some(sender.to_string())
-        }).unwrap()
+            to: Some(sender.to_string()),
+        }).unwrap(),
     });
 
     execute_contract(
@@ -47,6 +74,6 @@ pub fn execute_swap(
         contract_addr,
         &receive_msg,
         &[coin(700, "ukrw")],
-        sender
+        sender,
     ).unwrap()
 }

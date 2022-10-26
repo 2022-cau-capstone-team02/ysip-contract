@@ -8,6 +8,7 @@ use cw20_base::msg::{InstantiateMsg as Cw20InstantiateMsg, QueryMsg};
 use std::str::FromStr;
 use ysip::asset::{format_lp_token_name, Asset, AssetInfo};
 use ysip::pair::{Cw20HookMsg, ExecuteMsg, InstantiateMsg, PairInfo, SwapParams};
+use ysip::querier::query_lp_token_supply;
 use ysip::utils::{get_bank_transfer_to_msg, get_cw20_transfer_from_msg, get_fee_transfer_msg};
 
 const CONTRACT_NAME: &str = "ysip-pair-contract";
@@ -111,7 +112,7 @@ pub fn execute(
 ) -> Result<Response, ContractError> {
     match msg {
         ExecuteMsg::Receive(msg) => receive_cw20(deps, env, info, msg),
-        ExecuteMsg::ProvideLiquidity { assets, receiver } => unimplemented!(),
+        ExecuteMsg::ProvideLiquidity { assets } => provide_liquidity(deps, env, info, assets),
         ExecuteMsg::Swap {
             offer_asset,
             min_output_amount,
@@ -344,89 +345,89 @@ fn get_token2_amount_required(
     }
 }
 
-// fn provide_liquidity(
-//     deps: DepsMut,
-//     info: MessageInfo,
-//     env: Env,
-//     assets: [Asset; 2],
-// ) -> Result<Response, ContractError> {
-//     assets[0].info.check_is_valid(deps.api)?;
-//     assets[1].info.check_is_valid(deps.api)?;
-//
-//     for asset in assets {
-//         asset.assert_sent_native_token_balance(&info)?;
-//     }
-//
-//     let config = CONFIG.load(deps.storage)?;
-//
-//     let pools: [Asset; 2] = config
-//         .pair_info
-//         .query_pools(&deps.querier, env.contract.address)?;
-//
-//     let mut deposits: [Uint128; 2] = [
-//         assets
-//             .iter()
-//             .find(|a| a.info.equal(&pools[0].info))
-//             .map(|a| a.amount)
-//             .expect("Wrong asset info is given"),
-//         assets
-//             .iter()
-//             .find(|a| a.info.equal(&pools[1].info))
-//             .map(|a| a.amount)
-//             .expect("Wrong asset info is given"),
-//     ];
-//
-//     if deposits[0].is_zero() && deposits[1].is_zero() {
-//         return Err(ContractError::InvalidZeroAmount {});
-//     }
-//
-//     let lp_token_supply = get_lp_token_supply(deps.as_ref(), &lp_token_addr)?;
-//     let liquidity_amount = get_lp_token_amount_to_mint(
-//         deposits[0],
-//         lp_token_supply,
-//         assets[0].amount);
-//
-//     let token2_amount = get_token2_amount_required(
-//         deposits[1],
-//         deposits[0],
-//         lp_token_supply,
-//         assets[1].amount,
-//         assets[0].amount,
-//     )?;
-//
-//     let mut transfer_msgs: Vec<CosmosMsg> = vec![];
-//     if let AssetInfo::Token(addr) = assets[0].clone().info {
-//         transfer_msgs.push(get_cw20_transfer_from_msg(
-//             &info.sender,
-//             &env.contract.address,
-//             &addr,
-//             deposits[0],
-//         )?)
-//     }
-//
-//     if let AssetInfo::Token(addr) = assets[1].clone().info {
-//         transfer_msgs.push(get_cw20_transfer_from_msg(
-//             &info.sender,
-//             &env.contract.address,
-//             &addr,
-//             deposits[1],
-//         )?)
-//     }
-//
-//     if let AssetInfo::NativeToken(denom) = assets[1].clone().info {
-//         if token2_amount < max_token2 {
-//             transfer_msgs.push(get_bank_transfer_to_msg(
-//                 &info.sender,
-//                 &denom,
-//                 max_token2 - token2_amount,
-//             ))
-//         }
-//     }
-//
-//     // provide_liquidity business logic unimplemented
-//
-//     Ok(Response::new())
-// }
+fn provide_liquidity(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    assets: [Asset; 2],
+) -> Result<Response, ContractError> {
+    assets[0].info.check_is_valid(deps.api)?;
+    assets[1].info.check_is_valid(deps.api)?;
+
+    for asset in assets {
+        asset.assert_sent_native_token_balance(&info)?;
+    }
+
+    let config = CONFIG.load(deps.storage)?;
+
+    let pools: [Asset; 2] = config
+        .pair_info
+        .query_pools(&deps.querier, env.contract.address)?;
+
+    let mut deposits: [Uint128; 2] = [
+        assets
+            .iter()
+            .find(|a| a.info.equal(&pools[0].info))
+            .map(|a| a.amount)
+            .expect("Wrong asset info is given"),
+        assets
+            .iter()
+            .find(|a| a.info.equal(&pools[1].info))
+            .map(|a| a.amount)
+            .expect("Wrong asset info is given"),
+    ];
+
+    if deposits[0].is_zero() && deposits[1].is_zero() {
+        return Err(ContractError::InvalidZeroAmount {});
+    }
+
+    let lp_token_supply = query_lp_token_supply(deps.as_ref(), &lp_token_addr)?;
+    let liquidity_amount = get_lp_token_amount_to_mint(
+        deposits[0],
+        lp_token_supply,
+        assets[0].amount);
+
+    let token2_amount = get_token2_amount_required(
+        deposits[1],
+        deposits[0],
+        lp_token_supply,
+        assets[1].amount,
+        assets[0].amount,
+    )?;
+
+    let mut transfer_msgs: Vec<CosmosMsg> = vec![];
+    if let AssetInfo::Token(addr) = assets[0].clone().info {
+        transfer_msgs.push(get_cw20_transfer_from_msg(
+            &info.sender,
+            &env.contract.address,
+            &addr,
+            deposits[0],
+        )?)
+    }
+
+    if let AssetInfo::Token(addr) = assets[1].clone().info {
+        transfer_msgs.push(get_cw20_transfer_from_msg(
+            &info.sender,
+            &env.contract.address,
+            &addr,
+            deposits[1],
+        )?)
+    }
+
+    if let AssetInfo::NativeToken(denom) = assets[1].clone().info {
+        if token2_amount < max_token2 {
+            transfer_msgs.push(get_bank_transfer_to_msg(
+                &info.sender,
+                &denom,
+                max_token2 - token2_amount,
+            ))
+        }
+    }
+
+    // provide_liquidity business logic unimplemented
+
+    Ok(Response::new())
+}
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {

@@ -62,8 +62,6 @@ pub enum ExecuteMsg {
     ProvideLiquidity {
         /// The assets available in the pool
         assets: [Asset; 2],
-        /// The receiver of LP tokens
-        receiver: Option<String>,
     },
     /// Swap operation
     Swap {
