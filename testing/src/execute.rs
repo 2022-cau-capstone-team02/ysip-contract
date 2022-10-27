@@ -28,10 +28,56 @@ pub fn execute_mint(
     ).unwrap()
 }
 
+pub fn increase_allowance(
+    app: &mut BasicApp,
+    owner: &str,
+    pair_addr: &str,
+    token_addr: &str,
+    amount: u128,
+) -> Vec<Attribute> {
+    let increase_allowance_msg = Cw20ExecuteMsg::IncreaseAllowance {
+        spender: pair_addr.to_string(),
+        amount: Uint128::new(amount),
+        expires: None,
+    };
+
+    execute_contract(
+        app,
+        token_addr,
+        &increase_allowance_msg,
+        &[],
+        owner,
+    ).unwrap()
+}
+
+pub fn execute_transfer_from(
+    app: &mut BasicApp,
+    owner: &str,
+    recipient: &str,
+    token_addr: &str,
+    amount: u128,
+) -> Vec<Attribute> {
+    let transfer_from_msg = Cw20ExecuteMsg::TransferFrom {
+        owner: owner.to_string(),
+        recipient: recipient.to_string(),
+        amount: Uint128::new(amount),
+    };
+
+    execute_contract(
+        app,
+        token_addr,
+        &transfer_from_msg,
+        &[],
+        owner,
+    ).unwrap()
+}
+
 pub fn execute_provide_liquidity(
     app: &mut BasicApp,
     native_token_denom: &str,
+    native_token_amount: u128,
     token_contract_addr: &str,
+    token_amount: u128,
     pair_contract_addr: &str,
     sender: &str,
 ) -> Vec<Attribute> {
@@ -41,13 +87,13 @@ pub fn execute_provide_liquidity(
                 info: AssetInfo::Token {
                     contract_addr: Addr::unchecked(token_contract_addr)
                 },
-                amount: Uint128::new(20),
+                amount: Uint128::new(token_amount),
             },
             Asset {
                 info: AssetInfo::NativeToken {
                     denom: native_token_denom.to_string()
                 },
-                amount: Uint128::new(10),
+                amount: Uint128::new(native_token_amount),
             }
         ],
     };
@@ -56,7 +102,7 @@ pub fn execute_provide_liquidity(
         app,
         pair_contract_addr,
         &provide_liquidity_msg,
-        &[coin(10, "ukrw")],
+        &[coin(native_token_amount, native_token_denom)],
         sender,
     ).unwrap()
 }

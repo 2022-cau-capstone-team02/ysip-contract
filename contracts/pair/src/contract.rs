@@ -1,7 +1,10 @@
 use crate::error::ContractError;
 use crate::math::{get_lp_fee_amount, get_protocol_fee_amount, get_swap_output_amount};
 use crate::state::{Config, Fees, Liquidity, CONFIG, LIQUIDITY};
-use cosmwasm_std::{attr, entry_point, from_binary, to_binary, Addr, Decimal, DepsMut, Env, MessageInfo, Reply, ReplyOn, Response, StdError, SubMsg, Uint128, WasmMsg, StdResult, Binary, Deps, CosmosMsg};
+use cosmwasm_std::{
+    attr, entry_point, from_binary, to_binary, Addr, Binary, CosmosMsg, Decimal, Deps, DepsMut,
+    Env, MessageInfo, Reply, ReplyOn, Response, StdError, StdResult, SubMsg, Uint128, WasmMsg,
+};
 use cw2::set_contract_version;
 use cw20::{Cw20ReceiveMsg, MinterResponse};
 use cw20_base::msg::{InstantiateMsg as Cw20InstantiateMsg, QueryMsg};
@@ -9,7 +12,9 @@ use std::str::FromStr;
 use ysip::asset::{format_lp_token_name, Asset, AssetInfo};
 use ysip::pair::{Cw20HookMsg, ExecuteMsg, InstantiateMsg, PairInfo, SwapParams};
 use ysip::querier::query_lp_token_supply;
-use ysip::utils::{get_bank_transfer_to_msg, get_cw20_transfer_from_msg, get_fee_transfer_msg};
+use ysip::utils::{
+    get_bank_transfer_to_msg, get_cw20_mint_msg, get_cw20_transfer_from_msg, get_fee_transfer_msg,
+};
 
 const CONTRACT_NAME: &str = "ysip-pair-contract";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -77,7 +82,7 @@ pub fn instantiate(
             funds: vec![],
             label: "YSIP LP token".to_string(),
         }
-            .into(),
+        .into(),
         gas_limit: None,
         reply_on: ReplyOn::Success,
     };
@@ -134,10 +139,10 @@ fn receive_cw20(
 
     match from_binary(&msg.msg) {
         Ok(Cw20HookMsg::Swap {
-               min_output_amount,
-               max_spread,
-               to,
-           }) => {
+            min_output_amount,
+            max_spread,
+            to,
+        }) => {
             let mut authorized = false;
             let config: Config = CONFIG.load(deps.storage)?;
 
@@ -335,13 +340,17 @@ fn get_token2_amount_required(
     if liquidity_supply == Uint128::zero() {
         Ok(max_token)
     } else {
-        Ok(token1_amount
+        let temp_token2_amount = token1_amount
             .checked_mul(token2_reserve)
             .map_err(StdError::overflow)?
             .checked_div(token1_reserve)
-            .map_err(StdError::divide_by_zero)?
-            .checked_add(Uint128::new(1))
-            .map_err(StdError::overflow)?)
+            .map_err(StdError::divide_by_zero)?;
+
+        if temp_token2_amount.eq(&Uint128::zero()) {
+            Ok(Uint128::one())
+        } else {
+            Ok(temp_token2_amount)
+        }
     }
 }
 
@@ -381,20 +390,40 @@ fn provide_liquidity(
         return Err(ContractError::InvalidZeroAmount {});
     }
 
+    let reserve = LIQUIDITY.load(deps.storage)?;
 
-    let lp_token_supply = query_lp_token_supply(&deps.as_ref().querier, config.pair_info.liquidity_token)?;
-    let liquidity_amount = get_lp_token_amount_to_mint(
-        deposits[0],
-        lp_token_supply,
-        assets[0].amount);
+    let token1_reserve = [&reserve.token_a, &reserve.token_b]
+        .iter()
+        .find(|i| i.info.eq(&assets[0].info))
+        .expect("reserve not found").clone();
+
+    let token2_reserve = [&reserve.token_a, &reserve.token_b]
+        .iter()
+        .find(|i| i.info.eq(&assets[1].info))
+        .expect("reserve not found").clone();
+
+    let lp_token_supply = query_lp_token_supply(
+        &deps.as_ref().querier,
+        config.pair_info.liquidity_token.clone(),
+    )?;
+
+    let liquidity_amount =
+        get_lp_token_amount_to_mint(deposits[0], lp_token_supply, token1_reserve.amount)?;
 
     let token2_amount = get_token2_amount_required(
         deposits[1],
         deposits[0],
         lp_token_supply,
-        assets[1].amount,
-        assets[0].amount,
+        token2_reserve.amount,
+        token1_reserve.amount,
     )?;
+
+    if deposits[1] < token2_amount {
+        return Err(ContractError::NotEnoughTokenAmount {
+            need: token2_amount,
+            supplied: deposits[1],
+        });
+    }
 
     let mut transfer_msgs: Vec<CosmosMsg> = vec![];
     if let AssetInfo::Token { contract_addr } = assets[0].clone().info {
@@ -411,21 +440,59 @@ fn provide_liquidity(
             &info.sender,
             &env.contract.address,
             &contract_addr,
-            deposits[1],
+            token2_amount,
         )?)
     }
 
-    if let AssetInfo::NativeToken { denom } = assets[1].clone().info {
-        transfer_msgs.push(get_bank_transfer_to_msg(
-            &info.sender,
-            &denom,
-            token2_amount,
-        ))
+    // refund needed
+    if deposits[1] > token2_amount {
+        if let AssetInfo::NativeToken { denom } = assets[1].clone().info {
+            transfer_msgs.push(get_bank_transfer_to_msg(
+                &info.sender,
+                &denom,
+                deposits[1] - token2_amount,
+            ))
+        }
     }
 
-    // provide_liquidity business logic unimplemented
+    LIQUIDITY.update(deps.storage, |mut liq| -> Result<_, ContractError> {
+        assets
+            .iter()
+            .find(|a| a.info.eq(&liq.token_a.info))
+            .map(|a| {
+                liq.token_a.amount = liq
+                    .token_a
+                    .amount
+                    .checked_add(deposits[0])
+                    .expect("overflow");
+            });
 
-    Ok(Response::new().add_attribute("test", "provide_liquidity"))
+        assets
+            .iter()
+            .find(|a| a.info.eq(&liq.token_b.info))
+            .map(|a| {
+                liq.token_b.amount = liq
+                    .token_b
+                    .amount
+                    .checked_add(token2_amount)
+                    .expect("overflow");
+            });
+
+        Ok(liq)
+    })?;
+
+    let mint_lp_tokens_msg = get_cw20_mint_msg(
+        &info.sender,
+        liquidity_amount,
+        &config.pair_info.liquidity_token,
+    )?;
+
+    Ok(Response::new()
+        .add_attribute("action", "provide_liquidity")
+        .add_attribute("token_1_amount", deposits[0])
+        .add_attribute("token_2_amount", token2_amount)
+        .add_messages(transfer_msgs)
+        .add_message(mint_lp_tokens_msg))
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]

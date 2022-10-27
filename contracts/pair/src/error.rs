@@ -1,4 +1,4 @@
-use cosmwasm_std::StdError;
+use cosmwasm_std::{StdError, Uint128};
 use thiserror::Error;
 
 #[derive(Error, Debug, PartialEq)]
@@ -20,4 +20,7 @@ pub enum ContractError {
 
     #[error("InvalidZeroAmount")]
     InvalidZeroAmount {},
+
+    #[error("Not enough token amount: {need} needed, {supplied} supplied")]
+    NotEnoughTokenAmount { need: Uint128, supplied: Uint128 },
 }

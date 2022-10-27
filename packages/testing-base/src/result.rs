@@ -56,8 +56,8 @@ pub struct Metadata {
 pub trait Result {
     fn print_results(&self);
     fn write_answer_to_file(&self, path: &str)
-        where
-            Self: Serialize,
+    where
+        Self: Serialize,
     {
         let file = OpenOptions::new()
             .create(true)
@@ -127,8 +127,8 @@ impl Result for ExecuteAllResult {
 }
 
 impl<T> Result for QueryAllResult<T>
-    where
-        T: Debug + DeserializeOwned + PartialEq + Serialize + Clone,
+where
+    T: Debug + DeserializeOwned + PartialEq + Serialize + Clone,
 {
     fn print_results(&self) {
         for result in &self.responses {

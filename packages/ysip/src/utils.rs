@@ -39,6 +39,24 @@ pub fn get_bank_transfer_to_msg(
     transfer_bank_msg.into()
 }
 
+pub fn get_cw20_mint_msg(
+    recipient: &Addr,
+    amount: Uint128,
+    contract_addr: &Addr,
+) -> StdResult<CosmosMsg> {
+    let mint_msg = Cw20ExecuteMsg::Mint {
+        recipient: recipient.to_string(),
+        amount,
+    };
+
+    Ok(WasmMsg::Execute {
+        contract_addr: contract_addr.to_string(),
+        msg: to_binary(&mint_msg)?,
+        funds: vec![],
+    }
+    .into())
+}
+
 pub fn get_fee_transfer_msg(sender: &Addr, recipient: &Addr, fee: Asset) -> StdResult<CosmosMsg> {
     match fee.info {
         AssetInfo::Token { contract_addr } => {
