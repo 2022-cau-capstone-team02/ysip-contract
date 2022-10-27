@@ -5,6 +5,7 @@ use cw_multi_test::BasicApp;
 use testing_base::execute::execute_contract;
 use ysip::asset::{Asset, AssetInfo};
 use ysip::pair::{Cw20HookMsg, ExecuteMsg};
+use ysip::querier::query_token_balance;
 
 pub fn execute_mint(
     app: &mut BasicApp,
@@ -31,6 +32,7 @@ pub fn execute_provide_liquidity(
     app: &mut BasicApp,
     native_token_denom: &str,
     token_contract_addr: &str,
+    pair_contract_addr: &str,
     sender: &str,
 ) -> Vec<Attribute> {
     let provide_liquidity_msg = ExecuteMsg::ProvideLiquidity {
@@ -39,18 +41,24 @@ pub fn execute_provide_liquidity(
                 info: AssetInfo::Token {
                     contract_addr: Addr::unchecked(token_contract_addr)
                 },
-                amount: Uint128::new(10),
+                amount: Uint128::new(20),
             },
             Asset {
                 info: AssetInfo::NativeToken {
                     denom: native_token_denom.to_string()
                 },
-                amount: Uint128::new(5)
+                amount: Uint128::new(10),
             }
         ],
     };
 
-
+    execute_contract(
+        app,
+        pair_contract_addr,
+        &provide_liquidity_msg,
+        &[coin(10, "ukrw")],
+        sender,
+    ).unwrap()
 }
 
 pub fn execute_swap(

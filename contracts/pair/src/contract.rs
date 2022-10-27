@@ -1,7 +1,7 @@
 use crate::error::ContractError;
 use crate::math::{get_lp_fee_amount, get_protocol_fee_amount, get_swap_output_amount};
 use crate::state::{Config, Fees, Liquidity, CONFIG, LIQUIDITY};
-use cosmwasm_std::{attr, entry_point, from_binary, to_binary, Addr, Decimal, DepsMut, Env, MessageInfo, Reply, ReplyOn, Response, StdError, SubMsg, Uint128, WasmMsg, StdResult, Binary, Deps};
+use cosmwasm_std::{attr, entry_point, from_binary, to_binary, Addr, Decimal, DepsMut, Env, MessageInfo, Reply, ReplyOn, Response, StdError, SubMsg, Uint128, WasmMsg, StdResult, Binary, Deps, CosmosMsg};
 use cw2::set_contract_version;
 use cw20::{Cw20ReceiveMsg, MinterResponse};
 use cw20_base::msg::{InstantiateMsg as Cw20InstantiateMsg, QueryMsg};
@@ -77,7 +77,7 @@ pub fn instantiate(
             funds: vec![],
             label: "YSIP LP token".to_string(),
         }
-        .into(),
+            .into(),
         gas_limit: None,
         reply_on: ReplyOn::Success,
     };
@@ -134,10 +134,10 @@ fn receive_cw20(
 
     match from_binary(&msg.msg) {
         Ok(Cw20HookMsg::Swap {
-            min_output_amount,
-            max_spread,
-            to,
-        }) => {
+               min_output_amount,
+               max_spread,
+               to,
+           }) => {
             let mut authorized = false;
             let config: Config = CONFIG.load(deps.storage)?;
 
@@ -354,7 +354,7 @@ fn provide_liquidity(
     assets[0].info.check_is_valid(deps.api)?;
     assets[1].info.check_is_valid(deps.api)?;
 
-    for asset in assets {
+    for asset in &assets {
         asset.assert_sent_native_token_balance(&info)?;
     }
 
@@ -362,17 +362,17 @@ fn provide_liquidity(
 
     let pools: [Asset; 2] = config
         .pair_info
-        .query_pools(&deps.querier, env.contract.address)?;
+        .query_pools(&deps.querier, env.contract.address.clone())?;
 
     let mut deposits: [Uint128; 2] = [
         assets
             .iter()
-            .find(|a| a.info.equal(&pools[0].info))
+            .find(|a| a.info.eq(&pools[0].info))
             .map(|a| a.amount)
             .expect("Wrong asset info is given"),
         assets
             .iter()
-            .find(|a| a.info.equal(&pools[1].info))
+            .find(|a| a.info.eq(&pools[1].info))
             .map(|a| a.amount)
             .expect("Wrong asset info is given"),
     ];
@@ -381,7 +381,8 @@ fn provide_liquidity(
         return Err(ContractError::InvalidZeroAmount {});
     }
 
-    let lp_token_supply = query_lp_token_supply(deps.as_ref(), &lp_token_addr)?;
+
+    let lp_token_supply = query_lp_token_supply(&deps.as_ref().querier, config.pair_info.liquidity_token)?;
     let liquidity_amount = get_lp_token_amount_to_mint(
         deposits[0],
         lp_token_supply,
@@ -396,37 +397,35 @@ fn provide_liquidity(
     )?;
 
     let mut transfer_msgs: Vec<CosmosMsg> = vec![];
-    if let AssetInfo::Token(addr) = assets[0].clone().info {
+    if let AssetInfo::Token { contract_addr } = assets[0].clone().info {
         transfer_msgs.push(get_cw20_transfer_from_msg(
             &info.sender,
             &env.contract.address,
-            &addr,
+            &contract_addr,
             deposits[0],
         )?)
     }
 
-    if let AssetInfo::Token(addr) = assets[1].clone().info {
+    if let AssetInfo::Token { contract_addr } = assets[1].clone().info {
         transfer_msgs.push(get_cw20_transfer_from_msg(
             &info.sender,
             &env.contract.address,
-            &addr,
+            &contract_addr,
             deposits[1],
         )?)
     }
 
-    if let AssetInfo::NativeToken(denom) = assets[1].clone().info {
-        if token2_amount < max_token2 {
-            transfer_msgs.push(get_bank_transfer_to_msg(
-                &info.sender,
-                &denom,
-                max_token2 - token2_amount,
-            ))
-        }
+    if let AssetInfo::NativeToken { denom } = assets[1].clone().info {
+        transfer_msgs.push(get_bank_transfer_to_msg(
+            &info.sender,
+            &denom,
+            token2_amount,
+        ))
     }
 
     // provide_liquidity business logic unimplemented
 
-    Ok(Response::new())
+    Ok(Response::new().add_attribute("test", "provide_liquidity"))
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
