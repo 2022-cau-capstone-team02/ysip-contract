@@ -52,7 +52,7 @@ fn main() {
         1010
     );
 
-    let liquidity_res = execute_provide_liquidity(
+    let _liquidity_res = execute_provide_liquidity(
         &mut app,
         "ukrw",
         8000,
@@ -62,9 +62,7 @@ fn main() {
         ADDR1,
     );
 
-    println!("{:?}", liquidity_res);
-
-    let liquidity_res = execute_provide_liquidity(
+    let _liquidity_res = execute_provide_liquidity(
         &mut app,
         "ukrw",
         250,
@@ -74,24 +72,21 @@ fn main() {
         ADDR1,
     );
 
-    println!("{:?}", liquidity_res);
-
-    let token_balance: BalanceResponse = app.wrap().query_wasm_smart(
-        channel_a_contract_addr,
+    let _token_balance: BalanceResponse = app.wrap().query_wasm_smart(
+        channel_a_contract_addr.as_ref(),
         &Cw20QueryMsg::Balance {
             address: ADDR1.to_string()
         }).unwrap();
 
-    let coin_balance = app.wrap().query_balance(ADDR1, "ukrw").unwrap();
-
-    println!("{:?}", token_balance);
-    println!("{}", coin_balance);
+    let _coin_balance = app.wrap().query_balance(ADDR1, "ukrw").unwrap();
 
 
-    // let swap_res = execute_swap(
-    //     &mut app,
-    //     pair_contract_addr.as_ref(),
-    //     channel_a_contract_addr.as_ref(),
-    //     30
-    // );
+    let swap_res = execute_swap(
+        &mut app,
+        pair_contract_addr.as_ref(),
+        channel_a_contract_addr.as_ref(),
+        10
+    );
+
+    println!("{:?}", swap_res);
 }

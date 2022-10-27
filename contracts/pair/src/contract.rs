@@ -168,7 +168,7 @@ fn receive_cw20(
                 None
             };
 
-            let sender = deps.api.addr_validate(msg.sender.as_str())?;
+            let _sender = deps.api.addr_validate(msg.sender.as_str())?;
 
             swap(
                 deps,
@@ -222,85 +222,85 @@ fn swap(
     let fees = config.fees;
     let two_dec = Decimal::new(Uint128::new(2));
     let total_fee_percent = (fees.lp_fee_percent / two_dec) + fees.protocol_fee_percent;
-
+    //
     let protocol_fee_amount =
         get_protocol_fee_amount(params.offer_asset.amount, fees.protocol_fee_percent)?;
     let net_input_amount = params.offer_asset.amount - protocol_fee_amount;
-
+    //
     let token_bought_amount = get_swap_output_amount(
         net_input_amount,
         offer_pool.amount,
         ask_pool.amount,
         total_fee_percent,
     )?;
-
-    let (input_token_fee_amount, output_token_fee_amount) = get_lp_fee_amount(
-        net_input_amount,
-        token_bought_amount,
-        fees.lp_fee_percent / two_dec,
-    )?;
-
-    let net_token_output_amount = token_bought_amount - output_token_fee_amount;
-
-    params.assert_min_token_bought(Decimal::new(net_token_output_amount))?;
-
-    // send input token or coin to contract
-    let mut msgs = match params.offer_asset.info.clone() {
-        AssetInfo::Token { contract_addr } => vec![get_cw20_transfer_from_msg(
-            &info.sender,
-            &env.contract.address.clone(),
-            &contract_addr,
-            net_input_amount,
-        )?],
-        AssetInfo::NativeToken { denom } => vec![get_bank_transfer_to_msg(
-            &info.sender.clone(),
-            &denom,
-            net_input_amount,
-        )],
-    };
-
-    msgs.push(get_fee_transfer_msg(
-        &info.sender,
-        &fees.protocol_fee_recipient,
-        Asset {
-            info: offer_pool.info.clone(),
-            amount: protocol_fee_amount,
-        },
-    )?);
-
-    LIQUIDITY.update(deps.storage, |mut liquidity| -> Result<_, ContractError> {
-        if liquidity.token_a.info == offer_pool.info {
-            liquidity
-                .token_a
-                .amount
-                .checked_add(net_input_amount)
-                .map_err(StdError::overflow)?;
-            Ok(liquidity)
-        } else if liquidity.token_b.info == offer_pool.info {
-            liquidity
-                .token_a
-                .amount
-                .checked_add(net_input_amount)
-                .map_err(StdError::overflow)?;
-            Ok(liquidity)
-        } else if liquidity.token_a.info == ask_pool.info {
-            liquidity
-                .token_b
-                .amount
-                .checked_add(net_input_amount)
-                .map_err(StdError::overflow)?;
-            Ok(liquidity)
-        } else if liquidity.token_b.info == ask_pool.info {
-            liquidity
-                .token_b
-                .amount
-                .checked_add(net_input_amount)
-                .map_err(StdError::overflow)?;
-            Ok(liquidity)
-        } else {
-            Ok(liquidity)
-        }
-    })?;
+    //
+    // let (input_token_fee_amount, output_token_fee_amount) = get_lp_fee_amount(
+    //     net_input_amount,
+    //     token_bought_amount,
+    //     fees.lp_fee_percent / two_dec,
+    // )?;
+    //
+    // let net_token_output_amount = token_bought_amount - output_token_fee_amount;
+    //
+    // params.assert_min_token_bought(Decimal::new(net_token_output_amount))?;
+    //
+    // // send input token or coin to contract
+    // let mut msgs = match params.offer_asset.info.clone() {
+    //     AssetInfo::Token { contract_addr } => vec![get_cw20_transfer_from_msg(
+    //         &info.sender,
+    //         &env.contract.address.clone(),
+    //         &contract_addr,
+    //         net_input_amount,
+    //     )?],
+    //     AssetInfo::NativeToken { denom } => vec![get_bank_transfer_to_msg(
+    //         &info.sender.clone(),
+    //         &denom,
+    //         net_input_amount,
+    //     )],
+    // };
+    //
+    // msgs.push(get_fee_transfer_msg(
+    //     &info.sender,
+    //     &fees.protocol_fee_recipient,
+    //     Asset {
+    //         info: offer_pool.info.clone(),
+    //         amount: protocol_fee_amount,
+    //     },
+    // )?);
+    //
+    // LIQUIDITY.update(deps.storage, |mut liquidity| -> Result<_, ContractError> {
+    //     if liquidity.token_a.info == offer_pool.info {
+    //         liquidity
+    //             .token_a
+    //             .amount
+    //             .checked_add(net_input_amount)
+    //             .map_err(StdError::overflow)?;
+    //         Ok(liquidity)
+    //     } else if liquidity.token_b.info == offer_pool.info {
+    //         liquidity
+    //             .token_a
+    //             .amount
+    //             .checked_add(net_input_amount)
+    //             .map_err(StdError::overflow)?;
+    //         Ok(liquidity)
+    //     } else if liquidity.token_a.info == ask_pool.info {
+    //         liquidity
+    //             .token_b
+    //             .amount
+    //             .checked_add(net_input_amount)
+    //             .map_err(StdError::overflow)?;
+    //         Ok(liquidity)
+    //     } else if liquidity.token_b.info == ask_pool.info {
+    //         liquidity
+    //             .token_b
+    //             .amount
+    //             .checked_add(net_input_amount)
+    //             .map_err(StdError::overflow)?;
+    //         Ok(liquidity)
+    //     } else {
+    //         Ok(liquidity)
+    //     }
+    // })?;
 
     // Add liquidity with lp_fee
     // add_liquidity(input_token_fee_amount, output_token_fee_amount);
@@ -308,10 +308,11 @@ fn swap(
     Ok(Response::new()
         .add_attributes(vec![
             attr("action", "swap"),
-            attr("token_in_amount", params.offer_asset.amount.to_string()),
-            attr("token_out_amount", net_token_output_amount.to_string()),
+            // attr("token_in_amount", params.offer_asset.amount.to_string()),
+            // attr("token_out_amount", net_token_output_amount.to_string()),
         ])
-        .add_messages(msgs))
+        // .add_messages(msgs)
+    )
 }
 
 fn get_lp_token_amount_to_mint(
