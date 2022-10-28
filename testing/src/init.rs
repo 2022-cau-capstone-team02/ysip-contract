@@ -7,6 +7,11 @@ pub fn mock_cw20_contract() -> Box<dyn Contract<Empty>> {
 }
 
 pub fn mock_pair_contract() -> Box<dyn Contract<Empty>> {
-    let contract = ContractWrapper::new(pair::contract::execute, pair::contract::instantiate, pair::contract::query).with_reply(pair::contract::reply);
+    let contract = ContractWrapper::new(
+        pair::contract::execute,
+        pair::contract::instantiate,
+        pair::contract::query,
+    )
+    .with_reply(pair::contract::reply);
     Box::new(contract)
 }

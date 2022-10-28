@@ -1,6 +1,7 @@
 use crate::asset::{Asset, AssetInfo};
 use cosmwasm_std::{to_binary, Addr, Coin, CosmosMsg, StdResult, Uint128, WasmMsg};
 use cw20::Cw20ExecuteMsg;
+use crate::pair;
 
 pub fn get_cw20_transfer_from_msg(
     owner: &Addr,
@@ -21,6 +22,23 @@ pub fn get_cw20_transfer_from_msg(
     };
 
     Ok(exec_cw20_transfer.into())
+}
+
+pub fn get_cw20_transfer_msg(
+    recipient: &Addr,
+    token_addr: &Addr,
+    token_amount: Uint128,
+) -> StdResult<CosmosMsg> {
+    let transfer_cw20_msg = Cw20ExecuteMsg::Transfer {
+        recipient: recipient.to_string(),
+        amount: token_amount,
+    };
+
+    Ok(CosmosMsg::Wasm(WasmMsg::Execute {
+        contract_addr: token_addr.to_string(),
+        msg: to_binary(&transfer_cw20_msg)?,
+        funds: vec![],
+    }))
 }
 
 pub fn get_bank_transfer_to_msg(
@@ -54,13 +72,13 @@ pub fn get_cw20_mint_msg(
         msg: to_binary(&mint_msg)?,
         funds: vec![],
     }
-    .into())
+        .into())
 }
 
-pub fn get_fee_transfer_msg(sender: &Addr, recipient: &Addr, fee: Asset) -> StdResult<CosmosMsg> {
+pub fn get_fee_transfer_msg(recipient: &Addr, fee: Asset) -> StdResult<CosmosMsg> {
     match fee.info {
         AssetInfo::Token { contract_addr } => {
-            get_cw20_transfer_from_msg(sender, recipient, &contract_addr, fee.amount)
+            get_cw20_transfer_msg(recipient, &contract_addr, fee.amount)
         }
         AssetInfo::NativeToken { denom } => {
             Ok(get_bank_transfer_to_msg(recipient, &denom, fee.amount))

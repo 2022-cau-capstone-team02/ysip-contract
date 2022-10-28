@@ -1,6 +1,9 @@
 use cosmwasm_std::coin;
 use cw20::{BalanceResponse, Cw20QueryMsg};
-use testing::execute::{execute_mint, execute_provide_liquidity, execute_swap, execute_transfer_from, increase_allowance};
+use testing::execute::{
+    execute_mint, execute_provide_liquidity, execute_swap_coin_in, execute_swap_token_in,
+    execute_transfer_from, increase_allowance,
+};
 use testing::init::{mock_cw20_contract, mock_pair_contract};
 use testing::instantiate::{instantiate_cw20_contract, instantiate_pair_contract};
 use testing_base::consts::{ADDR1, ADDR2};
@@ -11,11 +14,10 @@ fn main() {
     let channel_a_code_id = app.store_code(mock_cw20_contract());
     let pair_code_id = app.store_code(mock_pair_contract());
 
-
     let channel_a_contract_addr = instantiate_cw20_contract(
         &mut app,
         channel_a_code_id,
-        &[coin(1000, "ukrw")],
+        &[],
         ADDR1,
         ADDR1,
         "channel_a",
@@ -29,14 +31,14 @@ fn main() {
         channel_a_contract_addr.as_ref(),
         ADDR1,
         ADDR1,
-        200005,
+        300000,
     );
 
     let pair_contract_addr = instantiate_pair_contract(
         &mut app,
         pair_code_id,
         channel_a_code_id,
-        &[coin(1000, "ukrw")],
+        &[],
         ADDR1,
         ADDR1,
         channel_a_contract_addr.as_ref(),
@@ -49,44 +51,41 @@ fn main() {
         ADDR1,
         pair_contract_addr.as_ref(),
         channel_a_contract_addr.as_ref(),
-        1010
+        300000,
     );
 
     let _liquidity_res = execute_provide_liquidity(
         &mut app,
         "ukrw",
-        8000,
+        100000,
         channel_a_contract_addr.as_ref(),
-        1000,
+        200000,
         pair_contract_addr.as_ref(),
         ADDR1,
     );
 
-    let _liquidity_res = execute_provide_liquidity(
-        &mut app,
-        "ukrw",
-        250,
-        channel_a_contract_addr.as_ref(),
-        10,
-        pair_contract_addr.as_ref(),
-        ADDR1,
-    );
-
-    let _token_balance: BalanceResponse = app.wrap().query_wasm_smart(
-        channel_a_contract_addr.as_ref(),
-        &Cw20QueryMsg::Balance {
-            address: ADDR1.to_string()
-        }).unwrap();
+    let _token_balance: BalanceResponse = app
+        .wrap()
+        .query_wasm_smart(
+            channel_a_contract_addr.as_ref(),
+            &Cw20QueryMsg::Balance {
+                address: ADDR1.to_string(),
+            },
+        )
+        .unwrap();
 
     let _coin_balance = app.wrap().query_balance(ADDR1, "ukrw").unwrap();
 
-
-    let swap_res = execute_swap(
+    let swap_res = execute_swap_token_in(
         &mut app,
         pair_contract_addr.as_ref(),
         channel_a_contract_addr.as_ref(),
-        10
+        ADDR1,
+        30000,
     );
 
+    let swap_res2 = execute_swap_coin_in(&mut app, pair_contract_addr.as_ref(), ADDR1, 5000);
+
     println!("{:?}", swap_res);
+    println!("{:?}", swap_res2);
 }

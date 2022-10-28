@@ -6,7 +6,7 @@ use ysip::asset::Asset;
 use ysip::pair::PairInfo;
 
 pub const FEE_SCALE_FACTOR: Uint128 = Uint128::new(10_000);
-pub const FEE_DECIMAL_PRECISION: Uint128 = Uint128::new(10u128.pow(20));
+pub const FEE_DECIMAL_PRECISION: Uint128 = Uint128::new(10u128.pow(18));
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Config {

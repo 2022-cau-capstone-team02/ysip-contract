@@ -1,5 +1,5 @@
 use crate::asset::{Asset, AssetInfo};
-use cosmwasm_std::{Addr, Decimal, QuerierWrapper, StdError, StdResult};
+use cosmwasm_std::{Addr, Decimal, QuerierWrapper, StdError, StdResult, Uint128};
 use cw20::Cw20ReceiveMsg;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -92,60 +92,32 @@ pub struct SwapParams {
     pub to: Option<Addr>,
 }
 
+fn to_decimal(input: &Option<String>) -> StdResult<Decimal> {
+    Ok(
+        Decimal::from_str(
+        &input
+            .clone()
+            .unwrap_or("0".to_string())
+        )?
+    )
+}
+
 impl SwapParams {
-    pub fn assert_min_token_bought(&self, true_amount: Decimal) -> StdResult<()> {
-        match &self.min_output_amount {
-            Some(min_output_amount) => {
-                let min_output_amount_decimal = Decimal::from_str(min_output_amount.as_ref())
-                    .map_err(|_| StdError::generic_err("conversion failed"))?;
+    pub fn assert_min_token_bought(&self, true_amount: Uint128) -> StdResult<()> {
+        let min_output_amount = to_decimal(&self.min_output_amount)?;
+        let max_spread = to_decimal(&self.max_spread)?;
 
-                if let Some(max_spread) = &self.max_spread {
-                    let max_spread_decimal = Decimal::from_str(max_spread.as_ref())
-                        .map_err(|_| StdError::generic_err("conversion failed"))?
-                        .checked_div(Decimal::from_str("100").unwrap())
-                        .map_err(|_| StdError::generic_err("overflow"))?;
-                    let ratio = true_amount
-                        .checked_div(min_output_amount_decimal)
-                        .map_err(|_| StdError::generic_err("failed to divide"))?;
-                    if ratio.gt(&max_spread_decimal.checked_add(Decimal::one()).unwrap()) {
-                        Err(StdError::generic_err("max spread error"))
-                    } else {
-                        Ok(())
-                    }
-                } else {
-                    Ok(())
-                }
-            }
-            None => Ok(()),
-        }
-    }
+        let max_diff = min_output_amount * Decimal::from_ratio(
+            max_spread.atomics(),
+            Uint128::new(10u128.pow(20)),
+        );
 
-    pub fn assert_min_token_sold(&self, true_amount: Decimal) -> StdResult<()> {
-        match &self.min_output_amount {
-            Some(min_output_amount) => {
-                let min_output_amount_decimal = Decimal::from_str(min_output_amount.as_ref())
-                    .map_err(|_| StdError::generic_err("conversion failed"))?;
-                if let Some(max_spread) = &self.max_spread {
-                    let max_spread_decimal = Decimal::from_str(max_spread.as_ref())
-                        .map_err(|_| StdError::generic_err("conversion failed"))?
-                        .checked_div(Decimal::from_str("100").unwrap())
-                        .map_err(|_| StdError::generic_err("overflow"))?;
-                    let ratio = true_amount
-                        .checked_div(min_output_amount_decimal)
-                        .map_err(|_| StdError::generic_err("failed to divide"))?;
-                    let temp = Decimal::one()
-                        .checked_sub(max_spread_decimal)
-                        .map_err(|_| StdError::generic_err("overflow"))?;
-                    if ratio.gt(&temp) || ratio.eq(&temp) {
-                        Ok(())
-                    } else {
-                        Err(StdError::generic_err("max spread error"))
-                    }
-                } else {
-                    Ok(())
-                }
-            }
-            None => Ok(()),
+        let true_amount = Decimal::new(true_amount * Uint128::new(10u128.pow(18)));
+
+        if true_amount >= max_diff {
+            Ok(())
+        } else {
+            Err(StdError::generic_err("not enough token bought"))
         }
     }
 }

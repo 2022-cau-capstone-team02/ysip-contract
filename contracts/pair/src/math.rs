@@ -25,6 +25,7 @@ pub fn get_swap_output_amount(
     let net_output_amount = output_reserve - output_reserve_after_swap;
 
     Ok(net_output_amount)
+
 }
 
 pub fn get_protocol_fee_amount(input_amount: Uint128, fee_percent: Decimal) -> StdResult<Uint128> {
@@ -33,11 +34,12 @@ pub fn get_protocol_fee_amount(input_amount: Uint128, fee_percent: Decimal) -> S
     }
 
     let fee_percent = fee_decimal_to_uint128(fee_percent)?;
+
     Ok(input_amount
         .full_mul(fee_percent)
-        .checked_div(Uint256::from(FEE_SCALE_FACTOR))
-        .map_err(StdError::divide_by_zero)?
-        .try_into()?)
+        .checked_div(Uint256::from(FEE_SCALE_FACTOR))?
+        .try_into()?
+    )
 }
 
 pub fn get_lp_fee_amount(
@@ -45,9 +47,13 @@ pub fn get_lp_fee_amount(
     output_token_amount: Uint128,
     lp_fee_percent: Decimal,
 ) -> StdResult<(Uint128, Uint128)> {
-    let fee = fee_decimal_to_uint128(lp_fee_percent)?;
-    let input_token_fee_amount = input_token_amount.multiply_ratio(fee, FEE_SCALE_FACTOR);
-    let output_token_fee_amount = output_token_amount.multiply_ratio(fee, FEE_SCALE_FACTOR);
+    if lp_fee_percent.is_zero() {
+        return Ok((Uint128::zero(), Uint128::zero()))
+    }
+
+    let fee_percent = fee_decimal_to_uint128(lp_fee_percent)?;
+    let input_token_fee_amount = input_token_amount.multiply_ratio(fee_percent, FEE_SCALE_FACTOR);
+    let output_token_fee_amount = output_token_amount.multiply_ratio(fee_percent, FEE_SCALE_FACTOR);
 
     Ok((input_token_fee_amount, output_token_fee_amount))
 }
