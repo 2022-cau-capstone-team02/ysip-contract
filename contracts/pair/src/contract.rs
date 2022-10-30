@@ -275,25 +275,24 @@ fn swap(
         .expect("reserve not found");
 
     let fees = config.fees;
-    let total_fee_percent = fees.lp_fee_percent + fees.protocol_fee_percent;
-    let protocol_fee_amount =
-        get_protocol_fee_amount(params.offer_asset.amount, fees.protocol_fee_percent)?;
 
-    /// amount of token into the pool
-    let net_input_amount = params.offer_asset.amount - protocol_fee_amount;
+    let protocol_fee_amount = get_protocol_fee_amount(params.offer_asset.amount, fees.protocol_fee_percent)?;
 
     let token_bought_amount = get_swap_output_amount(
-        net_input_amount,
+        params.offer_asset.amount - protocol_fee_amount,
         offer_pool_reserve.amount,
         ask_pool_reserve.amount,
-        total_fee_percent,
+        fees.lp_fee_percent,
     )?;
 
     let (input_token_fee_amount, output_token_fee_amount) = get_lp_fee_amount(
-        net_input_amount,
+        params.offer_asset.amount - protocol_fee_amount,
         token_bought_amount,
         fees.lp_fee_percent,
     )?;
+
+    /// amount of token into the pool
+    let net_input_amount = params.offer_asset.amount - protocol_fee_amount - input_token_fee_amount;
 
     /// amount of token out of the pool
     let net_token_output_amount = token_bought_amount - output_token_fee_amount;
@@ -338,23 +337,31 @@ fn swap(
         },
     )?);
 
+    println!("liquidity before swap: {:?}", LIQUIDITY.load(deps.storage).unwrap());
+
     LIQUIDITY.update(deps.storage, |mut liquidity| -> Result<_, ContractError> {
         if liquidity.token_a.info == offer_pool.info && liquidity.token_b.info == ask_pool.info {
             liquidity.token_a.amount = liquidity.token_a.amount.checked_add(net_input_amount + input_token_fee_amount).map_err(StdError::overflow)?;
-            liquidity.token_b.amount = liquidity.token_b.amount.checked_sub(net_token_output_amount - output_token_fee_amount).map_err(StdError::overflow)?;
+            liquidity.token_b.amount = liquidity.token_b.amount.checked_sub(net_token_output_amount).map_err(StdError::overflow)?;
         } else if liquidity.token_b.info == offer_pool.info && liquidity.token_a.info == ask_pool.info {
             liquidity.token_b.amount = liquidity.token_b.amount.checked_add(net_input_amount + input_token_fee_amount).map_err(StdError::overflow)?;
-            liquidity.token_a.amount = liquidity.token_a.amount.checked_sub(net_token_output_amount - output_token_fee_amount).map_err(StdError::overflow)?;
+            liquidity.token_a.amount = liquidity.token_a.amount.checked_sub(net_token_output_amount).map_err(StdError::overflow)?;
         }
         Ok(liquidity)
     })?;
+
+    println!("liquidity after swap: {:?}", LIQUIDITY.load(deps.storage).unwrap());
 
 
     Ok(Response::new()
         .add_attributes(vec![
             attr("action", "swap"),
-            attr("token_in_amount", net_input_amount),
+            attr("token_in_amount", params.offer_asset.amount),
             attr("token_out_amount", net_token_output_amount),
+            attr("protocol_fee_amount", protocol_fee_amount),
+            attr("protocol_fee_recipient", &fees.protocol_fee_recipient),
+            attr("input_token_fee_amount", input_token_fee_amount),
+            attr("output_token_fee_amount", output_token_fee_amount),
         ])
         .add_messages(msgs)
     )

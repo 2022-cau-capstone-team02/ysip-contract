@@ -6,6 +6,7 @@ use testing::execute::{
 };
 use testing::init::{mock_cw20_contract, mock_pair_contract};
 use testing::instantiate::{instantiate_cw20_contract, instantiate_pair_contract};
+use testing::query::query_cw20_balance;
 use testing_base::consts::{ADDR1, ADDR2};
 use testing_base::init::init_app;
 
@@ -40,7 +41,7 @@ fn main() {
         channel_a_code_id,
         &[],
         ADDR1,
-        ADDR1,
+        ADDR2,
         channel_a_contract_addr.as_ref(),
         "ukrw",
         "pair",
@@ -54,6 +55,16 @@ fn main() {
         300000,
     );
 
+    let token_balance_before_provide_liquidity = query_cw20_balance(
+        &app,
+        &channel_a_contract_addr,
+        ADDR1
+    );
+    println!("token_balance_before_provide_liquidity: {}", token_balance_before_provide_liquidity);
+
+    let coin_balance_before_provide_liquidity = app.wrap().query_balance(ADDR1, "ukrw").unwrap();
+    println!("coin_balance_before_provide_liquidity: {}", coin_balance_before_provide_liquidity);
+
     let _liquidity_res = execute_provide_liquidity(
         &mut app,
         "ukrw",
@@ -64,17 +75,16 @@ fn main() {
         ADDR1,
     );
 
-    let _token_balance: BalanceResponse = app
-        .wrap()
-        .query_wasm_smart(
-            channel_a_contract_addr.as_ref(),
-            &Cw20QueryMsg::Balance {
-                address: ADDR1.to_string(),
-            },
-        )
-        .unwrap();
+    let balance_after_provide_liquidity = query_cw20_balance(
+        &app,
+        &channel_a_contract_addr,
+        ADDR1
+    );
+    println!("token_balance_after_provide_liquidity: {}", balance_after_provide_liquidity);
 
-    let _coin_balance = app.wrap().query_balance(ADDR1, "ukrw").unwrap();
+    let coin_balance_before_provide_liquidity = app.wrap().query_balance(ADDR1, "ukrw").unwrap();
+    println!("coin_balance_after_provide_liquidity: {}", coin_balance_before_provide_liquidity);
+
 
     let swap_res = execute_swap_token_in(
         &mut app,
@@ -84,8 +94,27 @@ fn main() {
         30000,
     );
 
-    let swap_res2 = execute_swap_coin_in(&mut app, pair_contract_addr.as_ref(), ADDR1, 5000);
+    swap_res.iter().for_each(|i| println!("{:?}", i));
 
-    println!("{:?}", swap_res);
-    println!("{:?}", swap_res2);
+    let token_balance_after_swap1 = query_cw20_balance(
+        &app,
+        &channel_a_contract_addr,
+        ADDR1
+    );
+    println!("token_balance_after_swap1: {}", token_balance_after_swap1);
+
+    let coin_balance_after_swap1 = app.wrap().query_balance(ADDR1, "ukrw").unwrap();
+    println!("coin_balance_after_swap1: {}", coin_balance_after_swap1);
+
+    let token_balance_after_swap1 = query_cw20_balance(
+        &app,
+        &channel_a_contract_addr,
+        ADDR2
+    );
+    println!("token_balance_of_admin_after_swap1: {}", token_balance_after_swap1);
+
+    let coin_balance_after_swap1 = app.wrap().query_balance(ADDR2, "ukrw").unwrap();
+    println!("coin_balance_of_admin_after_swap1: {}", coin_balance_after_swap1);
+
+
 }
