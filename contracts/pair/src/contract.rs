@@ -10,7 +10,7 @@ use cw20::MinterResponse;
 use cw20_base::msg::InstantiateMsg as Cw20InstantiateMsg;
 use std::str::FromStr;
 use ysip::asset::{format_lp_token_name, Asset, AssetInfo};
-use ysip::pair::{ExecuteMsg, InstantiateMsg, PairInfo, QueryMsg, SwapParams};
+use ysip::pair::{ExecuteMsg, InstantiateMsg, PairInfo, QueryMsg, SwapParams, PairInfoResponse, LiquidityResponse};
 use ysip::querier::query_lp_token_supply;
 use ysip::utils::{
     get_bank_transfer_to_msg, get_cw20_mint_msg, get_cw20_transfer_from_msg, get_cw20_transfer_msg,
@@ -39,7 +39,6 @@ pub fn instantiate(
 
     let config = Config {
         pair_info: PairInfo::init(env.contract.address.clone(), msg.asset_infos.clone()),
-        factory_addr: Addr::unchecked(""),
         fees: Fees {
             protocol_fee_recipient: Addr::unchecked(msg.protocol_fee_recipient),
             protocol_fee_percent: Decimal::from_str(&msg.protocol_fee_percent)?
@@ -83,7 +82,7 @@ pub fn instantiate(
             funds: vec![],
             label: "YSIP LP token".to_string(),
         }
-        .into(),
+            .into(),
         gas_limit: None,
         reply_on: ReplyOn::Success,
     };
@@ -504,6 +503,32 @@ fn provide_liquidity(
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
-    Ok(Binary::default())
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+    match msg {
+        QueryMsg::PairInfo {} => query_pair_info(deps),
+        QueryMsg::Liquidity {} => query_liquidity(deps),
+    }
 }
+
+fn query_pair_info(deps: Deps) -> StdResult<Binary> {
+    let config = CONFIG.load(deps.storage)?;
+    let res = PairInfoResponse {
+        assets: config.pair_info.asset_infos
+    };
+
+    Ok(to_binary(&res)?)
+}
+
+fn query_liquidity(deps: Deps) -> StdResult<Binary> {
+    let liquidity = LIQUIDITY.load(deps.storage)?;
+    let res = LiquidityResponse {
+        liquidity: [
+            liquidity.token_a,
+            liquidity.token_b
+        ]
+    };
+
+    Ok(to_binary(&res)?)
+}
+
+

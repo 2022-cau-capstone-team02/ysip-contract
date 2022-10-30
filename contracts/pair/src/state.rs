@@ -11,7 +11,6 @@ pub const FEE_DECIMAL_PRECISION: Uint128 = Uint128::new(10u128.pow(18));
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Config {
     pub pair_info: PairInfo,
-    pub factory_addr: Addr,
     pub fees: Fees,
 }
 
