@@ -1,5 +1,5 @@
 use crate::state::{FEE_DECIMAL_PRECISION, FEE_SCALE_FACTOR};
-use cosmwasm_std::{Binary, coin, Coin, CosmosMsg, Decimal, StdError, StdResult, to_binary, Uint128, WasmMsg};
+use cosmwasm_std::{to_binary, Coin, CosmosMsg, Decimal, StdError, StdResult, Uint128, WasmMsg};
 use cw20::Cw20ExecuteMsg;
 use ysip::asset::Asset;
 use ysip::pair::ExecuteMsg;
@@ -26,20 +26,19 @@ pub fn get_provide_liquidity_msg(
             Asset {
                 info: offer_pool.info,
                 amount: input_token_fee_amount,
-            }, Asset {
+            },
+            Asset {
                 info: ask_pool.info,
                 amount: output_token_fee_amount,
-            }
-        ]
+            },
+        ],
     };
 
-    Ok(
-        CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: contract_addr.to_string(),
-            msg: to_binary(&provide_liquidity_msg)?,
-            funds,
-        })
-    )
+    Ok(CosmosMsg::Wasm(WasmMsg::Execute {
+        contract_addr: contract_addr.to_string(),
+        msg: to_binary(&provide_liquidity_msg)?,
+        funds,
+    }))
 }
 
 pub fn get_increase_allowance_msg(
@@ -53,11 +52,9 @@ pub fn get_increase_allowance_msg(
         expires: None,
     };
 
-    Ok(
-        CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: contract_addr.to_string(),
-            msg: to_binary(&increae_allowance_msg)?,
-            funds: vec![],
-        })
-    )
+    Ok(CosmosMsg::Wasm(WasmMsg::Execute {
+        contract_addr: contract_addr.to_string(),
+        msg: to_binary(&increae_allowance_msg)?,
+        funds: vec![],
+    }))
 }

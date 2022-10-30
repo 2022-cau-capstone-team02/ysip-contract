@@ -1,16 +1,21 @@
 use crate::error::ContractError;
 use crate::math::{get_lp_fee_amount, get_protocol_fee_amount, get_swap_output_amount};
 use crate::state::{Config, Fees, Liquidity, CONFIG, LIQUIDITY};
-use cosmwasm_std::{attr, entry_point, from_binary, to_binary, Addr, Binary, CosmosMsg, Decimal, Deps, DepsMut, Env, MessageInfo, Reply, ReplyOn, Response, StdError, StdResult, SubMsg, Uint128, WasmMsg, coin, Coin};
+use cosmwasm_std::{
+    attr, entry_point, to_binary, Addr, Binary, CosmosMsg, Decimal, Deps, DepsMut, Env,
+    MessageInfo, Reply, ReplyOn, Response, StdError, StdResult, SubMsg, Uint128, WasmMsg,
+};
 use cw2::set_contract_version;
-use cw20::{Cw20ReceiveMsg, MinterResponse};
-use cw20_base::msg::{InstantiateMsg as Cw20InstantiateMsg, QueryMsg};
+use cw20::MinterResponse;
+use cw20_base::msg::InstantiateMsg as Cw20InstantiateMsg;
 use std::str::FromStr;
 use ysip::asset::{format_lp_token_name, Asset, AssetInfo};
-use ysip::pair::{Cw20HookMsg, ExecuteMsg, InstantiateMsg, PairInfo, SwapParams};
+use ysip::pair::{ExecuteMsg, InstantiateMsg, PairInfo, QueryMsg, SwapParams};
 use ysip::querier::query_lp_token_supply;
-use ysip::utils::{get_bank_transfer_to_msg, get_cw20_mint_msg, get_cw20_transfer_from_msg, get_cw20_transfer_msg, get_fee_transfer_msg};
-use crate::utils::{get_increase_allowance_msg, get_provide_liquidity_msg};
+use ysip::utils::{
+    get_bank_transfer_to_msg, get_cw20_mint_msg, get_cw20_transfer_from_msg, get_cw20_transfer_msg,
+    get_fee_transfer_msg,
+};
 
 const CONTRACT_NAME: &str = "ysip-pair-contract";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -78,7 +83,7 @@ pub fn instantiate(
             funds: vec![],
             label: "YSIP LP token".to_string(),
         }
-            .into(),
+        .into(),
         gas_limit: None,
         reply_on: ReplyOn::Success,
     };
@@ -112,88 +117,21 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::Receive(msg) => receive_cw20(deps, env, info, msg),
         ExecuteMsg::ProvideLiquidity { assets } => provide_liquidity(deps, env, info, assets),
         ExecuteMsg::Swap {
             offer_asset,
             min_output_amount,
             max_spread,
             to,
-        } => {
-            execute_swap(
-                deps,
-                env,
-                info,
-                offer_asset,
-                min_output_amount,
-                max_spread,
-                to,
-            )
-        }
-    }
-}
-
-fn receive_cw20(
-    deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-    msg: Cw20ReceiveMsg,
-) -> Result<Response, ContractError> {
-    let contract_addr = info.sender.clone();
-
-    match from_binary(&msg.msg) {
-        Ok(Cw20HookMsg::Swap {
-               min_output_amount,
-               max_spread,
-               to,
-           }) => {
-            let mut authorized = false;
-            let config: Config = CONFIG.load(deps.storage)?;
-
-            config
-                .pair_info
-                .asset_infos
-                .into_iter()
-                .for_each(|asset_info| {
-                    if let AssetInfo::Token { contract_addr } = &asset_info {
-                        if contract_addr == &info.sender {
-                            authorized = true;
-                        }
-                    }
-                });
-
-            if !authorized {
-                return Err(ContractError::Unauthorized {});
-            }
-
-            let to_addr = if let Some(to_addr) = to {
-                Some(deps.api.addr_validate(to_addr.as_str())?)
-            } else {
-                None
-            };
-
-            let _sender = deps.api.addr_validate(msg.sender.as_str())?;
-
-            swap(
-                deps,
-                env,
-                info,
-                SwapParams {
-                    offer_asset: Asset {
-                        info: AssetInfo::Token { contract_addr },
-                        amount: msg.amount,
-                    },
-                    min_output_amount,
-                    max_spread,
-                    to: to_addr,
-                },
-            )
-        }
-        Ok(Cw20HookMsg::WithdrawLiquidity {}) => {
-            unimplemented!();
-            // withdraw_liquidity(deps, env, info, Addr::unchecked(msg.sender), msg.amount)
-        }
-        Err(err) => Err(ContractError::Std(err)),
+        } => execute_swap(
+            deps,
+            env,
+            info,
+            offer_asset,
+            min_output_amount,
+            max_spread,
+            to,
+        ),
     }
 }
 
@@ -203,12 +141,14 @@ fn get_reserve(deps: Deps, assets: [Asset; 2]) -> StdResult<[Asset; 2]> {
     let token1_reserve = [&reserve.token_a, &reserve.token_b]
         .iter()
         .find(|i| i.info.eq(&assets[0].info))
-        .expect("reserve not found").clone();
+        .expect("reserve not found")
+        .clone();
 
     let token2_reserve = [&reserve.token_a, &reserve.token_b]
         .iter()
         .find(|i| i.info.eq(&assets[1].info))
-        .expect("reserve not found").clone();
+        .expect("reserve not found")
+        .clone();
 
     Ok([token1_reserve.clone(), token2_reserve.clone()])
 }
@@ -228,12 +168,17 @@ fn execute_swap(
         None
     };
 
-    swap(deps, env, info, SwapParams {
-        offer_asset,
-        min_output_amount,
-        max_spread,
-        to: to_addr,
-    })
+    swap(
+        deps,
+        env,
+        info,
+        SwapParams {
+            offer_asset,
+            min_output_amount,
+            max_spread,
+            to: to_addr,
+        },
+    )
 }
 
 fn swap(
@@ -276,7 +221,8 @@ fn swap(
 
     let fees = config.fees;
 
-    let protocol_fee_amount = get_protocol_fee_amount(params.offer_asset.amount, fees.protocol_fee_percent)?;
+    let protocol_fee_amount =
+        get_protocol_fee_amount(params.offer_asset.amount, fees.protocol_fee_percent)?;
 
     let token_bought_amount = get_swap_output_amount(
         params.offer_asset.amount - protocol_fee_amount,
@@ -291,10 +237,10 @@ fn swap(
         fees.lp_fee_percent,
     )?;
 
-    /// amount of token into the pool
+    // amount of token into the pool
     let net_input_amount = params.offer_asset.amount - protocol_fee_amount - input_token_fee_amount;
 
-    /// amount of token out of the pool
+    //amount of token out of the pool
     let net_token_output_amount = token_bought_amount - output_token_fee_amount;
 
     params.assert_min_token_bought(net_token_output_amount)?;
@@ -314,19 +260,16 @@ fn swap(
 
     // send output token or coin to sender
     match ask_pool.info.clone() {
-        AssetInfo::Token { contract_addr } =>
-            msgs.push(get_cw20_transfer_msg(
-                &info.sender,
-                &contract_addr,
-                net_token_output_amount,
-            )?),
-        AssetInfo::NativeToken { denom } => msgs.push(
-            get_bank_transfer_to_msg(
-                &info.sender.clone(),
-                &denom,
-                net_token_output_amount,
-            )
-        ),
+        AssetInfo::Token { contract_addr } => msgs.push(get_cw20_transfer_msg(
+            &info.sender,
+            &contract_addr,
+            net_token_output_amount,
+        )?),
+        AssetInfo::NativeToken { denom } => msgs.push(get_bank_transfer_to_msg(
+            &info.sender.clone(),
+            &denom,
+            net_token_output_amount,
+        )),
     };
 
     msgs.push(get_fee_transfer_msg(
@@ -337,21 +280,44 @@ fn swap(
         },
     )?);
 
-    println!("liquidity before swap: {:?}", LIQUIDITY.load(deps.storage).unwrap());
+    println!(
+        "liquidity before swap: {:?}",
+        LIQUIDITY.load(deps.storage).unwrap()
+    );
 
     LIQUIDITY.update(deps.storage, |mut liquidity| -> Result<_, ContractError> {
         if liquidity.token_a.info == offer_pool.info && liquidity.token_b.info == ask_pool.info {
-            liquidity.token_a.amount = liquidity.token_a.amount.checked_add(net_input_amount + input_token_fee_amount).map_err(StdError::overflow)?;
-            liquidity.token_b.amount = liquidity.token_b.amount.checked_sub(net_token_output_amount).map_err(StdError::overflow)?;
-        } else if liquidity.token_b.info == offer_pool.info && liquidity.token_a.info == ask_pool.info {
-            liquidity.token_b.amount = liquidity.token_b.amount.checked_add(net_input_amount + input_token_fee_amount).map_err(StdError::overflow)?;
-            liquidity.token_a.amount = liquidity.token_a.amount.checked_sub(net_token_output_amount).map_err(StdError::overflow)?;
+            liquidity.token_a.amount = liquidity
+                .token_a
+                .amount
+                .checked_add(net_input_amount + input_token_fee_amount)
+                .map_err(StdError::overflow)?;
+            liquidity.token_b.amount = liquidity
+                .token_b
+                .amount
+                .checked_sub(net_token_output_amount)
+                .map_err(StdError::overflow)?;
+        } else if liquidity.token_b.info == offer_pool.info
+            && liquidity.token_a.info == ask_pool.info
+        {
+            liquidity.token_b.amount = liquidity
+                .token_b
+                .amount
+                .checked_add(net_input_amount + input_token_fee_amount)
+                .map_err(StdError::overflow)?;
+            liquidity.token_a.amount = liquidity
+                .token_a
+                .amount
+                .checked_sub(net_token_output_amount)
+                .map_err(StdError::overflow)?;
         }
         Ok(liquidity)
     })?;
 
-    println!("liquidity after swap: {:?}", LIQUIDITY.load(deps.storage).unwrap());
-
+    println!(
+        "liquidity after swap: {:?}",
+        LIQUIDITY.load(deps.storage).unwrap()
+    );
 
     Ok(Response::new()
         .add_attributes(vec![
@@ -363,8 +329,7 @@ fn swap(
             attr("input_token_fee_amount", input_token_fee_amount),
             attr("output_token_fee_amount", output_token_fee_amount),
         ])
-        .add_messages(msgs)
-    )
+        .add_messages(msgs))
 }
 
 fn get_lp_token_amount_to_mint(
@@ -426,7 +391,7 @@ fn provide_liquidity(
         .pair_info
         .query_pools(&deps.querier, env.contract.address.clone())?;
 
-    let mut deposits: [Uint128; 2] = [
+    let deposits: [Uint128; 2] = [
         assets
             .iter()
             .find(|a| a.info.eq(&pools[0].info))
@@ -442,8 +407,6 @@ fn provide_liquidity(
     if deposits[0].is_zero() && deposits[1].is_zero() {
         return Err(ContractError::InvalidZeroAmount {});
     }
-
-    let reserve = LIQUIDITY.load(deps.storage)?;
 
     let [token1_reserve, token2_reserve] = get_reserve(deps.as_ref(), assets.clone())?;
 
@@ -504,7 +467,7 @@ fn provide_liquidity(
         assets
             .iter()
             .find(|a| a.info.eq(&liq.token_a.info))
-            .map(|a| {
+            .map(|_| {
                 liq.token_a.amount = liq
                     .token_a
                     .amount
@@ -515,7 +478,7 @@ fn provide_liquidity(
         assets
             .iter()
             .find(|a| a.info.eq(&liq.token_b.info))
-            .map(|a| {
+            .map(|_| {
                 liq.token_b.amount = liq
                     .token_b
                     .amount

@@ -1,6 +1,5 @@
 use crate::asset::{Asset, AssetInfo};
 use cosmwasm_std::{Addr, Decimal, QuerierWrapper, StdError, StdResult, Uint128};
-use cw20::Cw20ReceiveMsg;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
@@ -56,8 +55,6 @@ impl PairInfo {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
-    /// Receives a message of type [`Cw20ReceiveMsg`]
-    Receive(Cw20ReceiveMsg),
     /// ProvideLiquidity allows someone to provide liquidity in the pool
     ProvideLiquidity {
         /// The assets available in the pool
@@ -72,18 +69,9 @@ pub enum ExecuteMsg {
     },
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub enum Cw20HookMsg {
-    /// Swap a given amount of asset
-    Swap {
-        min_output_amount: Option<String>,
-        max_spread: Option<String>,
-        to: Option<String>,
-    },
-    /// Withdraw liquidity from the pool
-    WithdrawLiquidity {},
-}
+pub enum QueryMsg {}
 
 pub struct SwapParams {
     pub offer_asset: Asset,
@@ -93,13 +81,9 @@ pub struct SwapParams {
 }
 
 fn to_decimal(input: &Option<String>) -> StdResult<Decimal> {
-    Ok(
-        Decimal::from_str(
-        &input
-            .clone()
-            .unwrap_or("0".to_string())
-        )?
-    )
+    Ok(Decimal::from_str(
+        &input.clone().unwrap_or("0".to_string()),
+    )?)
 }
 
 impl SwapParams {
@@ -107,10 +91,8 @@ impl SwapParams {
         let min_output_amount = to_decimal(&self.min_output_amount)?;
         let max_spread = to_decimal(&self.max_spread)?;
 
-        let max_diff = min_output_amount * Decimal::from_ratio(
-            max_spread.atomics(),
-            Uint128::new(10u128.pow(20)),
-        );
+        let max_diff = min_output_amount
+            * Decimal::from_ratio(max_spread.atomics(), Uint128::new(10u128.pow(20)));
 
         let true_amount = Decimal::new(true_amount * Uint128::new(10u128.pow(18)));
 

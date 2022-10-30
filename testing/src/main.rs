@@ -1,8 +1,5 @@
-use cosmwasm_std::coin;
-use cw20::{BalanceResponse, Cw20QueryMsg};
 use testing::execute::{
-    execute_mint, execute_provide_liquidity, execute_swap_coin_in, execute_swap_token_in,
-    execute_transfer_from, increase_allowance,
+    execute_mint, execute_provide_liquidity, execute_swap_token_in, increase_allowance,
 };
 use testing::init::{mock_cw20_contract, mock_pair_contract};
 use testing::instantiate::{instantiate_cw20_contract, instantiate_pair_contract};

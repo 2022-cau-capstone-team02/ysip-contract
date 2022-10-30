@@ -1,11 +1,9 @@
-use cosmwasm_std::{coin, to_binary, Addr, Attribute, Coin, CosmosMsg, Uint128};
+use cosmwasm_std::{coin, Addr, Attribute, Uint128};
 use cw20::Cw20ExecuteMsg;
-use cw20::Cw20ReceiveMsg;
 use cw_multi_test::BasicApp;
 use testing_base::execute::execute_contract;
 use ysip::asset::{Asset, AssetInfo};
-use ysip::pair::{Cw20HookMsg, ExecuteMsg};
-use ysip::querier::query_token_balance;
+use ysip::pair::{ExecuteMsg};
 
 pub fn execute_mint(
     app: &mut BasicApp,

@@ -25,7 +25,6 @@ pub fn get_swap_output_amount(
     let net_output_amount = output_reserve - output_reserve_after_swap;
 
     Ok(net_output_amount)
-
 }
 
 pub fn get_protocol_fee_amount(input_amount: Uint128, fee_percent: Decimal) -> StdResult<Uint128> {
@@ -38,8 +37,7 @@ pub fn get_protocol_fee_amount(input_amount: Uint128, fee_percent: Decimal) -> S
     Ok(input_amount
         .full_mul(fee_percent)
         .checked_div(Uint256::from(FEE_SCALE_FACTOR))?
-        .try_into()?
-    )
+        .try_into()?)
 }
 
 pub fn get_lp_fee_amount(
@@ -48,7 +46,7 @@ pub fn get_lp_fee_amount(
     lp_fee_percent: Decimal,
 ) -> StdResult<(Uint128, Uint128)> {
     if lp_fee_percent.is_zero() {
-        return Ok((Uint128::zero(), Uint128::zero()))
+        return Ok((Uint128::zero(), Uint128::zero()));
     }
 
     let fee_percent = fee_decimal_to_uint128(lp_fee_percent)?;

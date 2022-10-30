@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, StdResult, Uint128};
+use cosmwasm_std::{Addr, Uint128};
 use cw20::{BalanceResponse, Cw20QueryMsg};
 use cw_multi_test::BasicApp;
 

@@ -1,7 +1,6 @@
 use crate::asset::{Asset, AssetInfo};
 use cosmwasm_std::{to_binary, Addr, Coin, CosmosMsg, StdResult, Uint128, WasmMsg};
 use cw20::Cw20ExecuteMsg;
-use crate::pair;
 
 pub fn get_cw20_transfer_from_msg(
     owner: &Addr,
@@ -72,7 +71,7 @@ pub fn get_cw20_mint_msg(
         msg: to_binary(&mint_msg)?,
         funds: vec![],
     }
-        .into())
+    .into())
 }
 
 pub fn get_fee_transfer_msg(recipient: &Addr, fee: Asset) -> StdResult<CosmosMsg> {
