@@ -3,11 +3,11 @@ use cw20::Cw20ExecuteMsg;
 use cw_multi_test::BasicApp;
 use testing_base::execute::execute_contract;
 use ysip::asset::{Asset, AssetInfo};
-use ysip::pair::{ExecuteMsg};
+use ysip::pair::ExecuteMsg;
 
 pub fn execute_mint(
     app: &mut BasicApp,
-    contract_addr: &str,
+    contract_addr: &Addr,
     admin: &str,
     recipient: &str,
     amount: u128,
@@ -23,24 +23,24 @@ pub fn execute_mint(
 pub fn increase_allowance(
     app: &mut BasicApp,
     owner: &str,
-    pair_addr: &str,
-    token_addr: &str,
+    spender: &Addr,
+    contract_addr: &Addr,
     amount: u128,
 ) -> Vec<Attribute> {
     let increase_allowance_msg = Cw20ExecuteMsg::IncreaseAllowance {
-        spender: pair_addr.to_string(),
+        spender: spender.to_string(),
         amount: Uint128::new(amount),
         expires: None,
     };
 
-    execute_contract(app, token_addr, &increase_allowance_msg, &[], owner).unwrap()
+    execute_contract(app, contract_addr, &increase_allowance_msg, &[], owner).unwrap()
 }
 
 pub fn execute_transfer_from(
     app: &mut BasicApp,
     owner: &str,
     recipient: &str,
-    token_addr: &str,
+    token_addr: &Addr,
     amount: u128,
 ) -> Vec<Attribute> {
     let transfer_from_msg = Cw20ExecuteMsg::TransferFrom {
@@ -56,9 +56,9 @@ pub fn execute_provide_liquidity(
     app: &mut BasicApp,
     native_token_denom: &str,
     native_token_amount: u128,
-    token_contract_addr: &str,
+    token_contract_addr: &Addr,
     token_amount: u128,
-    pair_contract_addr: &str,
+    pair_contract_addr: &Addr,
     sender: &str,
 ) -> Vec<Attribute> {
     let provide_liquidity_msg = ExecuteMsg::ProvideLiquidity {
@@ -84,14 +84,13 @@ pub fn execute_provide_liquidity(
         &provide_liquidity_msg,
         &[coin(native_token_amount, native_token_denom)],
         sender,
-    )
-    .unwrap()
+    ).unwrap()
 }
 
 pub fn execute_swap_token_in(
     app: &mut BasicApp,
-    contract_addr: &str,
-    token_addr: &str,
+    contract_addr: &Addr,
+    token_addr: &Addr,
     sender: &str,
     swap_amount_in: u128,
 ) -> Vec<Attribute> {
@@ -112,7 +111,7 @@ pub fn execute_swap_token_in(
 
 pub fn execute_swap_coin_in(
     app: &mut BasicApp,
-    contract_addr: &str,
+    contract_addr: &Addr,
     sender: &str,
     swap_amount_in: u128,
 ) -> Vec<Attribute> {
@@ -134,6 +133,24 @@ pub fn execute_swap_coin_in(
         &swap_msg,
         &[coin(swap_amount_in, "ukrw")],
         sender,
-    )
-    .unwrap()
+    ).unwrap()
+}
+
+pub fn execute_remove_liquidity(
+    app: &mut BasicApp,
+    contract_addr: &Addr,
+    sender: &str,
+    amount: Uint128,
+) -> Vec<Attribute> {
+    let remove_liquidity_msg = ExecuteMsg::RemoveLiquidity {
+        amount
+    };
+
+    execute_contract(
+        app,
+        contract_addr,
+        &remove_liquidity_msg,
+        &[],
+        sender,
+    ).unwrap()
 }

@@ -37,11 +37,11 @@ impl PairInfo {
     pub fn query_pools(
         &self,
         querier: &QuerierWrapper,
-        contract_addr: Addr,
+        contract_addr: &Addr,
     ) -> StdResult<[Asset; 2]> {
         Ok([
             Asset {
-                amount: self.asset_infos[0].query_pool(querier, contract_addr.clone())?,
+                amount: self.asset_infos[0].query_pool(querier, contract_addr)?,
                 info: self.asset_infos[0].clone(),
             },
             Asset {
@@ -67,6 +67,10 @@ pub enum ExecuteMsg {
         max_spread: Option<String>,
         to: Option<String>,
     },
+
+    RemoveLiquidity {
+        amount: Uint128,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -80,6 +84,8 @@ pub enum QueryMsg {
 #[serde(rename_all = "snake_case")]
 pub struct PairInfoResponse {
     pub assets: [AssetInfo; 2],
+    pub contract_addr: Addr,
+    pub liquidity_token: Addr,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

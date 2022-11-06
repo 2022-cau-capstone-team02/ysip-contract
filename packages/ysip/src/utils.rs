@@ -84,3 +84,21 @@ pub fn get_fee_transfer_msg(recipient: &Addr, fee: Asset) -> StdResult<CosmosMsg
         }
     }
 }
+
+pub fn get_burn_from_msg(
+    contract_addr: &Addr,
+    owner: &Addr,
+    amount: Uint128,
+) -> StdResult<CosmosMsg> {
+    let msg = Cw20ExecuteMsg::BurnFrom {
+        owner: owner.to_string(),
+        amount,
+    };
+
+    Ok(WasmMsg::Execute {
+        contract_addr: contract_addr.to_string(),
+        msg: to_binary(&msg)?,
+        funds: vec![],
+    }
+    .into())
+}

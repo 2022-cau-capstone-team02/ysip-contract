@@ -21,6 +21,12 @@ pub enum ContractError {
     #[error("InvalidZeroAmount")]
     InvalidZeroAmount {},
 
-    #[error("Not enough token amount: {need} needed, {supplied} supplied")]
+    #[error("Not enough token amount: {need} required, {supplied} supplied")]
     NotEnoughTokenAmount { need: Uint128, supplied: Uint128 },
+
+    #[error("Not enough balance: {avaiable} avaiable, {requested} requested")]
+    NotEnoughBalance {
+        avaiable: Uint128,
+        requested: Uint128,
+    },
 }

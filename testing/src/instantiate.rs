@@ -38,7 +38,7 @@ pub fn instantiate_pair_contract(
     funds: &[Coin],
     sender: &str,
     admin: &str,
-    token_addr: &str,
+    token_addr: &Addr,
     native_token_denom: &str,
     label: &str,
 ) -> Addr {

@@ -10,6 +10,7 @@
       <sourceFolder url="file://$MODULE_DIR$/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/packages/testing-base/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/testing/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/contracts/ico/src" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
       <excludeFolder url="file://$MODULE_DIR$/contracts/token/target" />
       <excludeFolder url="file://$MODULE_DIR$/contracts/pair/target" />

@@ -98,10 +98,10 @@ impl AssetInfo {
         Ok(())
     }
 
-    pub fn query_pool(&self, querier: &QuerierWrapper, pool_addr: Addr) -> StdResult<Uint128> {
+    pub fn query_pool(&self, querier: &QuerierWrapper, pool_addr: &Addr) -> StdResult<Uint128> {
         match self {
             AssetInfo::Token { contract_addr } => {
-                query_token_balance(querier, contract_addr.clone(), pool_addr)
+                query_token_balance(querier, contract_addr, pool_addr)
             }
             AssetInfo::NativeToken { denom } => {
                 query_balance(querier, pool_addr, denom.to_string())

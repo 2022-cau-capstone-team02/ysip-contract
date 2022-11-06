@@ -10,11 +10,13 @@ use cw20::MinterResponse;
 use cw20_base::msg::InstantiateMsg as Cw20InstantiateMsg;
 use std::str::FromStr;
 use ysip::asset::{format_lp_token_name, Asset, AssetInfo};
-use ysip::pair::{ExecuteMsg, InstantiateMsg, PairInfo, QueryMsg, SwapParams, PairInfoResponse, LiquidityResponse};
-use ysip::querier::query_lp_token_supply;
+use ysip::pair::{
+    ExecuteMsg, InstantiateMsg, LiquidityResponse, PairInfo, PairInfoResponse, QueryMsg, SwapParams,
+};
+use ysip::querier::{query_lp_token_supply, query_token_balance};
 use ysip::utils::{
-    get_bank_transfer_to_msg, get_cw20_mint_msg, get_cw20_transfer_from_msg, get_cw20_transfer_msg,
-    get_fee_transfer_msg,
+    get_bank_transfer_to_msg, get_burn_from_msg, get_cw20_mint_msg, get_cw20_transfer_from_msg,
+    get_cw20_transfer_msg, get_fee_transfer_msg,
 };
 
 const CONTRACT_NAME: &str = "ysip-pair-contract";
@@ -82,7 +84,7 @@ pub fn instantiate(
             funds: vec![],
             label: "YSIP LP token".to_string(),
         }
-            .into(),
+        .into(),
         gas_limit: None,
         reply_on: ReplyOn::Success,
     };
@@ -116,7 +118,9 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::ProvideLiquidity { assets } => provide_liquidity(deps, env, info, assets),
+        ExecuteMsg::ProvideLiquidity { assets } => {
+            execute_provide_liquidity(deps, env, info, assets)
+        }
         ExecuteMsg::Swap {
             offer_asset,
             min_output_amount,
@@ -131,6 +135,7 @@ pub fn execute(
             max_spread,
             to,
         ),
+        ExecuteMsg::RemoveLiquidity { amount } => execute_remove_liquidity(deps, env, info, amount),
     }
 }
 
@@ -191,7 +196,7 @@ fn swap(
 
     let pools: [Asset; 2] = config
         .pair_info
-        .query_pools(&deps.querier, env.contract.address.clone())?;
+        .query_pools(&deps.querier, &env.contract.address)?;
 
     let offer_pool: Asset;
     let ask_pool: Asset;
@@ -371,7 +376,7 @@ fn get_token2_amount_required(
     }
 }
 
-fn provide_liquidity(
+fn execute_provide_liquidity(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
@@ -388,7 +393,7 @@ fn provide_liquidity(
 
     let pools: [Asset; 2] = config
         .pair_info
-        .query_pools(&deps.querier, env.contract.address.clone())?;
+        .query_pools(&deps.querier, &env.contract.address)?;
 
     let deposits: [Uint128; 2] = [
         assets
@@ -409,10 +414,8 @@ fn provide_liquidity(
 
     let [token1_reserve, token2_reserve] = get_reserve(deps.as_ref(), assets.clone())?;
 
-    let lp_token_supply = query_lp_token_supply(
-        &deps.as_ref().querier,
-        config.pair_info.liquidity_token.clone(),
-    )?;
+    let lp_token_supply =
+        query_lp_token_supply(&deps.as_ref().querier, &config.pair_info.liquidity_token)?;
 
     let liquidity_amount =
         get_lp_token_amount_to_mint(deposits[0], lp_token_supply, token1_reserve.amount)?;
@@ -502,6 +505,83 @@ fn provide_liquidity(
         .add_message(mint_lp_tokens_msg))
 }
 
+fn execute_remove_liquidity(
+    deps: DepsMut,
+    _env: Env,
+    info: MessageInfo,
+    amount: Uint128,
+) -> Result<Response, ContractError> {
+    let config = CONFIG.load(deps.storage)?;
+    let lp_token_addr = config.pair_info.liquidity_token;
+    let lp_token_balance = query_token_balance(&deps.querier, &lp_token_addr, &info.sender)?;
+    let lp_token_supply = query_lp_token_supply(&deps.querier, &lp_token_addr)?;
+
+    if amount > lp_token_balance {
+        return Err(ContractError::NotEnoughBalance {
+            avaiable: lp_token_balance,
+            requested: amount,
+        });
+    }
+
+    let liquidity = LIQUIDITY.load(deps.storage)?;
+
+    let token1_amount = amount
+        .checked_mul(liquidity.token_a.amount)
+        .map_err(StdError::overflow)?
+        .checked_div(lp_token_supply)
+        .map_err(StdError::divide_by_zero)?;
+
+    let token2_amount = amount
+        .checked_mul(liquidity.token_b.amount)
+        .map_err(StdError::overflow)?
+        .checked_div(lp_token_supply)
+        .map_err(StdError::divide_by_zero)?;
+
+    LIQUIDITY.update(deps.storage, |mut liquidity| -> Result<_, ContractError> {
+        liquidity.token_a.amount = liquidity
+            .token_a
+            .amount
+            .checked_sub(token1_amount)
+            .map_err(StdError::overflow)?;
+
+        liquidity.token_b.amount = liquidity
+            .token_b
+            .amount
+            .checked_sub(token2_amount)
+            .map_err(StdError::overflow)?;
+
+        Ok(liquidity)
+    })?;
+
+    let token1_transfer_msg = match liquidity.token_a.info {
+        AssetInfo::Token { contract_addr } => {
+            get_cw20_transfer_msg(&info.sender, &contract_addr, token1_amount)?
+        }
+        AssetInfo::NativeToken { denom } => {
+            get_bank_transfer_to_msg(&info.sender, &denom, token1_amount)
+        }
+    };
+
+    let token2_transfer_msg = match liquidity.token_b.info {
+        AssetInfo::Token { contract_addr } => {
+            get_cw20_transfer_msg(&info.sender, &contract_addr, token2_amount)?
+        }
+        AssetInfo::NativeToken { denom } => {
+            get_bank_transfer_to_msg(&info.sender, &denom, token2_amount)
+        }
+    };
+
+    let lp_token_burn_msg = get_burn_from_msg(&lp_token_addr, &info.sender, amount)?;
+
+    Ok(Response::new()
+        .add_message(token1_transfer_msg)
+        .add_message(token2_transfer_msg)
+        .add_message(lp_token_burn_msg)
+        .add_attribute("liquidity_burned", amount)
+        .add_attribute("token1_returned", token1_amount)
+        .add_attribute("token2_returned", token2_amount))
+}
+
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
@@ -513,7 +593,9 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 fn query_pair_info(deps: Deps) -> StdResult<Binary> {
     let config = CONFIG.load(deps.storage)?;
     let res = PairInfoResponse {
-        assets: config.pair_info.asset_infos
+        assets: config.pair_info.asset_infos,
+        contract_addr: config.pair_info.contract_addr,
+        liquidity_token: config.pair_info.liquidity_token,
     };
 
     Ok(to_binary(&res)?)
@@ -522,13 +604,8 @@ fn query_pair_info(deps: Deps) -> StdResult<Binary> {
 fn query_liquidity(deps: Deps) -> StdResult<Binary> {
     let liquidity = LIQUIDITY.load(deps.storage)?;
     let res = LiquidityResponse {
-        liquidity: [
-            liquidity.token_a,
-            liquidity.token_b
-        ]
+        liquidity: [liquidity.token_a, liquidity.token_b],
     };
 
     Ok(to_binary(&res)?)
 }
-
-

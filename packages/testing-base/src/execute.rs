@@ -7,7 +7,7 @@ use std::fmt::Debug;
 
 pub fn execute_contract<T>(
     app: &mut BasicApp,
-    contract_addr: &str,
+    contract_addr: &Addr,
     msg: &T,
     send_funds: &[Coin],
     sender: &str,
@@ -17,7 +17,7 @@ where
 {
     let execute_res = app.execute_contract(
         Addr::unchecked(sender),
-        Addr::unchecked(contract_addr),
+        contract_addr.clone(),
         &msg,
         send_funds,
     );

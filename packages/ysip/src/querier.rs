@@ -15,8 +15,8 @@ pub fn query_token_symbol(querier: &QuerierWrapper, contract_addr: Addr) -> StdR
 
 pub fn query_token_balance(
     querier: &QuerierWrapper,
-    contract_addr: Addr,
-    account_addr: Addr,
+    contract_addr: &Addr,
+    account_addr: &Addr,
 ) -> StdResult<Uint128> {
     let res: Cw20BalanceResponse = querier
         .query(&QueryRequest::Wasm(WasmQuery::Smart {
@@ -33,7 +33,7 @@ pub fn query_token_balance(
 
 pub fn query_balance(
     querier: &QuerierWrapper,
-    account_addr: Addr,
+    account_addr: &Addr,
     denom: String,
 ) -> StdResult<Uint128> {
     let balance = querier.query_balance(account_addr, denom)?;
@@ -52,7 +52,7 @@ pub fn query_token_precision(querier: &QuerierWrapper, asset_info: AssetInfo) ->
     })
 }
 
-pub fn query_lp_token_supply(querier: &QuerierWrapper, lp_token_addr: Addr) -> StdResult<Uint128> {
+pub fn query_lp_token_supply(querier: &QuerierWrapper, lp_token_addr: &Addr) -> StdResult<Uint128> {
     let resp: TokenInfoResponse =
         querier.query_wasm_smart(lp_token_addr, &cw20_base::msg::QueryMsg::TokenInfo {})?;
     Ok(resp.total_supply)
