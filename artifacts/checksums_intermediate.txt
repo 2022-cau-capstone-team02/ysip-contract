@@ -1,2 +1,0 @@
-1c74415f842dbd44418db7fd2d6ef4824f352dac36e432ff4973a04c580ec72d  target/wasm32-unknown-unknown/release/pair.wasm
-697151d50fba13e1c4fc14491eea188dd262135d740b90b47fba118842c72cc1  target/wasm32-unknown-unknown/release/token.wasm

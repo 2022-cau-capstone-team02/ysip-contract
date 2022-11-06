@@ -18,3 +18,5 @@ Cargo.lock
 *.pdb
 .idea
 # End of https://www.toptal.com/developers/gitignore/api/rust
+
+artifacts
