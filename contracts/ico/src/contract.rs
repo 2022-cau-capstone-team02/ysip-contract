@@ -1,6 +1,6 @@
 use crate::error::ContractError;
 use crate::execute::{end_funding, fund_channel_token, refund};
-use cosmwasm_std::{entry_point, Addr, Deps, DepsMut, Env, MessageInfo, Reply, Response};
+use cosmwasm_std::{entry_point, Addr, Deps, DepsMut, Env, MessageInfo, Reply, Response, Uint128};
 use cw2::set_contract_version;
 
 const CONTRACT_NAME: &str = "ysip-ico-contract";
@@ -20,10 +20,11 @@ pub fn instantiate(
 
     let config = Config {
         admin: info.sender,
-        target_funding: msg.target_funding,
+        target_funding_amount: msg.target_funding,
+        current_funding_amount: Uint128::zero(),
         deadline: msg.deadline,
-        is_finished: false,
         token_contract: Addr::unchecked(""),
+        finished: false,
     };
 
     CONFIG.save(deps.storage, &config)?;
@@ -36,12 +37,12 @@ pub fn instantiate(
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::FundChannelToken {} => fund_channel_token(deps, info),
+        ExecuteMsg::FundChannelToken {} => fund_channel_token(deps, env, info),
         ExecuteMsg::EndFunding {} => end_funding(deps, info),
         ExecuteMsg::Refund {} => refund(deps, info),
     }
