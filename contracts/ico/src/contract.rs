@@ -21,7 +21,7 @@ pub fn instantiate(
     let config = Config {
         admin: info.sender,
         target_funding: msg.target_funding,
-        deadline,
+        deadline: msg.deadline,
         is_finished: false,
         token_contract: Addr::unchecked(""),
     };
@@ -61,4 +61,5 @@ pub fn query(
 pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractError> {
     let res = cw_utils::parse_reply_instantiate_data(msg).unwrap();
     let addr = res.contract_address;
+    Ok(Response::new())
 }
