@@ -15,12 +15,16 @@ library = []
 
 [dependencies]
 cw2 = "0.13.4"
+cw20 = "0.13.4"
+cw20-base = "0.13.4"
 cosmwasm-std = { version = "1.0.0" }
-cw-storage-plus = "0.13.4"
+cw-storage-plus = "0.16.0"
 cw-utils = "0.13.4"
 schemars = "0.8.10"
 serde = { version = "1.0.145", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0.37"}
+ysip = {path = "../../packages/ysip"}
+pair = {path = "../pair"}
 
 [dev-dependencies]
 cosmwasm-schema = "1.1.2"

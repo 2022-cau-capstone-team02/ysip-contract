@@ -20,6 +20,7 @@ testing-base = {path = "../packages/testing-base"}
 token = {path = "../contracts/token"}
 pair = {path = "../contracts/pair"}
 ysip = {path = "../packages/ysip"}
+ico = {path = "../contracts/ico"}
 cw-multi-test = "0.13.4"
 
 

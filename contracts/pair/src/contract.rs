@@ -71,8 +71,8 @@ pub fn instantiate(
             admin: Some(env.contract.address.to_string()),
             code_id: msg.token_code_id,
             msg: to_binary(&Cw20InstantiateMsg {
-                name: lp_token_name,
-                symbol: "uLP".to_string(),
+                name: lp_token_name.clone(),
+                symbol: "uLp".to_string(),
                 decimals: 6,
                 initial_balances: vec![],
                 mint: Some(MinterResponse {

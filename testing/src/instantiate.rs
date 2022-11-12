@@ -52,10 +52,9 @@ pub fn instantiate_pair_contract(
             },
         ],
         token_code_id,
-        factory_addr: "".to_string(),
         protocol_fee_recipient: admin.to_string(),
         protocol_fee_percent: "0.15".to_string(),
-        lp_fee_percent: "0.1".to_string(),
+        lp_fee_percent: "0.15".to_string(),
     };
 
     instantiate_contract(

@@ -10,8 +10,6 @@ pub struct InstantiateMsg {
     pub asset_infos: [AssetInfo; 2],
     /// The token contract code ID used for the tokens in the pool
     pub token_code_id: u64,
-    /// The factory contract address
-    pub factory_addr: String,
     /// Address that recieves protocol fee
     pub protocol_fee_recipient: String,
     pub protocol_fee_percent: String,

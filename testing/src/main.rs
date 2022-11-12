@@ -1,12 +1,15 @@
-use cosmwasm_std::Uint128;
+use cosmwasm_std::{Addr, BankMsg, BlockInfo, coin, CosmosMsg, Timestamp, Uint128};
+use cw_multi_test::{Executor, next_block};
 use testing::execute::{execute_mint, execute_provide_liquidity, execute_remove_liquidity, execute_swap_token_in, increase_allowance};
-use testing::init::{mock_cw20_contract, mock_pair_contract};
+use testing::init::{mock_cw20_contract, mock_ico_contract, mock_pair_contract};
 use testing::instantiate::{instantiate_cw20_contract, instantiate_pair_contract};
 use testing::query::{query_cw20_balance, query_pair_info};
 use testing_base::consts::{ADDR1, ADDR2};
+use testing_base::execute::execute_contract;
 use testing_base::init::init_app;
+use testing_base::instantiate::instantiate_contract;
 
-fn main() {
+fn basic_test() {
     let mut app = init_app(ADDR1);
     let channel_a_code_id = app.store_code(mock_cw20_contract());
     let pair_code_id = app.store_code(mock_pair_contract());
@@ -114,7 +117,7 @@ fn main() {
         coin_balance_after_swap1
     );
 
-    let pair_info_response =  query_pair_info(&app, &pair_contract_addr);
+    let pair_info_response = query_pair_info(&app, &pair_contract_addr);
 
     increase_allowance(
         &mut app,
@@ -124,10 +127,89 @@ fn main() {
         500000,
     );
 
-    let a= query_cw20_balance(&app, &pair_info_response.liquidity_token, ADDR1);
+    let a = query_cw20_balance(&app, &pair_info_response.liquidity_token, ADDR1);
     println!("{}", a);
 
     let remove_liquidity_res = execute_remove_liquidity(&mut app, &pair_contract_addr, ADDR1, Uint128::new(100000));
     remove_liquidity_res.iter().for_each(|a| println!("{:?}", a));
+}
 
+fn ico_test() {
+    let mut app = init_app(ADDR1);
+    let channel_a_code_id = app.store_code(mock_cw20_contract());
+    let pair_code_id = app.store_code(mock_pair_contract());
+
+    let ico_code_id = app.store_code(mock_ico_contract());
+
+    let instantiate_msg = ico::msg::InstantiateMsg {
+        target_funding: Uint128::new(500),
+        deadline: 123_46,
+        token_code_id: channel_a_code_id,
+        pair_code_id,
+        token_name: "channel".to_string(),
+        token_symbol: "CHANNEL".to_string(),
+        channel_token_amount: 1000000,
+    };
+
+    app.execute(
+        Addr::unchecked(ADDR1),
+        CosmosMsg::Bank(BankMsg::Send {
+            to_address: ADDR2.to_string(),
+            amount: vec![coin(50000, "ukrw")],
+        }),
+    ).unwrap();
+
+    let addr = instantiate_contract(
+        &mut app,
+        instantiate_msg,
+        &[],
+        ico_code_id,
+        ADDR1,
+        ADDR1,
+        "ico",
+    );
+
+    let res = execute_contract(
+        &mut app,
+        &addr,
+        &ico::msg::ExecuteMsg::FundChannelToken {},
+        &[coin(250, "ukrw")],
+        ADDR1,
+    ).unwrap();
+
+    println!("{:?}", res);
+
+    let res = execute_contract(
+        &mut app,
+        &addr,
+        &ico::msg::ExecuteMsg::FundChannelToken {},
+        &[coin(250, "ukrw")],
+        ADDR2,
+    ).unwrap();
+    println!("{:?}", res);
+
+
+    app.set_block(BlockInfo {
+        height: 123_47,
+        time: Default::default(),
+        chain_id: "".to_string()
+    });
+
+    let res = execute_contract(
+        &mut app,
+        &addr,
+        &ico::msg::ExecuteMsg::EndFunding {},
+        &[],
+        ADDR1,
+    ).unwrap();
+    println!("{:?}", res);
+
+    let b = app.wrap().query_balance(ADDR1, "ukrw").unwrap();
+    println!("{:?}", b);
+
+}
+
+fn main() {
+    // basic_test()
+    ico_test();
 }

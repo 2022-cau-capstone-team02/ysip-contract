@@ -1,4 +1,4 @@
-use cosmwasm_std::StdError;
+use cosmwasm_std::{CheckedMultiplyRatioError, StdError};
 use thiserror::Error;
 
 #[derive(Error, Debug, PartialEq)]
@@ -11,4 +11,16 @@ pub enum ContractError {
 
     #[error("Invalid coin amount")]
     InvalidCoinAmount {},
+
+    #[error("Funding not finished")]
+    FundingNotFinished {},
+
+    #[error("Unauthorized")]
+    Unauthorized {},
+
+    #[error("Not Found")]
+    NotFound {},
+
+    #[error("{inner}")]
+    Generic { inner: String },
 }

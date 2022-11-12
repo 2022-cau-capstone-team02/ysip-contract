@@ -12,6 +12,15 @@ pub fn mock_pair_contract() -> Box<dyn Contract<Empty>> {
         pair::contract::instantiate,
         pair::contract::query,
     )
-    .with_reply(pair::contract::reply);
+        .with_reply(pair::contract::reply);
+    Box::new(contract)
+}
+
+pub fn mock_ico_contract() -> Box<dyn Contract<Empty>> {
+    let contract = ContractWrapper::new(
+        ico::contract::execute,
+        ico::contract::instantiate,
+        ico::contract::query,
+    ).with_reply(ico::contract::reply);
     Box::new(contract)
 }
