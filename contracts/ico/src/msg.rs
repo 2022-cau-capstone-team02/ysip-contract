@@ -28,4 +28,5 @@ pub enum ExecuteMsg {
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     FundingAmount { addr: String },
+    IsFundingFinished {},
 }

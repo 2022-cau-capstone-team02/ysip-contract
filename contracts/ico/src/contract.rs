@@ -1,6 +1,9 @@
 use crate::error::ContractError;
 use crate::execute::{end_funding, fund_channel_token, refund};
-use cosmwasm_std::{entry_point, to_binary, Addr, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Order, Reply, Response, StdError, StdResult, Uint128, WasmMsg, SubMsg, ReplyOn};
+use cosmwasm_std::{
+    entry_point, to_binary, Addr, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Order, Reply,
+    ReplyOn, Response, StdError, StdResult, SubMsg, Uint128, WasmMsg,
+};
 use cw2::set_contract_version;
 use cw20::Cw20ExecuteMsg;
 use ysip::asset::AssetInfo;
@@ -63,6 +66,7 @@ pub fn execute(
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::FundingAmount { addr } => Ok(Binary::default()),
+        QueryMsg::IsFundingFinished {} => Ok(Binary::default())
     }
 }
 
@@ -100,7 +104,7 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractEr
                                 inner: format!("{:?}", e),
                             })?,
                     )
-                        .map_err(|_| ContractError::NotFound {})?)
+                    .map_err(|_| ContractError::NotFound {})?)
                 })
                 .collect::<Result<Vec<CosmosMsg>, ContractError>>();
 
@@ -115,11 +119,11 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractEr
                     msg: to_binary(&ysip::pair::InstantiateMsg {
                         asset_infos: [
                             AssetInfo::Token {
-                                contract_addr: Addr::unchecked(res.contract_address.clone())
+                                contract_addr: Addr::unchecked(res.contract_address.clone()),
                             },
                             AssetInfo::NativeToken {
-                                denom: "ukrw".to_string()
-                            }
+                                denom: "ukrw".to_string(),
+                            },
                         ],
                         token_code_id: config.token_code_id,
                         protocol_fee_recipient: config.admin.to_string(),
@@ -128,25 +132,21 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractEr
                     })?,
                     funds: vec![],
                     label: format!("{}-ukrw lp pair", config.token_symbol),
-                }.into(),
+                }
+                .into(),
                 gas_limit: None,
                 reply_on: ReplyOn::Success,
             };
 
-            Ok(
-                Response::new()
-                    .add_attribute("channel_token_instantiate", res.clone().contract_address)
-                    .add_attribute("channel_token_mint", config.channel_token_amount)
-                    .add_message(mint_msg)
-                    .add_messages(transfer_ico_tokens_msgs?)
-                    .add_submessage(instantiate_lp_msg)
-            )
+            Ok(Response::new()
+                .add_attribute("channel_token_instantiate", res.clone().contract_address)
+                .add_attribute("channel_token_mint", config.channel_token_amount)
+                .add_message(mint_msg)
+                .add_messages(transfer_ico_tokens_msgs?)
+                .add_submessage(instantiate_lp_msg))
         }
         LP_POOL_INSTANTIATE_ID => {
-            Ok(
-                Response::new()
-                    .add_attribute("lp_pool_instantiate", res.contract_address)
-            )
+            Ok(Response::new().add_attribute("lp_pool_instantiate", res.contract_address))
         }
         _ => Err(ContractError::NotFound {}),
     }
