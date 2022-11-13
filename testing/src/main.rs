@@ -8,6 +8,7 @@ use testing_base::consts::{ADDR1, ADDR2};
 use testing_base::execute::execute_contract;
 use testing_base::init::init_app;
 use testing_base::instantiate::instantiate_contract;
+use ico::msg::{FundingAmountResponse, IsFundingFinishedResponse};
 
 fn basic_test() {
     let mut app = init_app(ADDR1);
@@ -183,16 +184,16 @@ fn ico_test() {
         &mut app,
         &addr,
         &ico::msg::ExecuteMsg::FundChannelToken {},
-        &[coin(250, "ukrw")],
+        &[coin(240, "ukrw")],
         ADDR2,
     ).unwrap();
     println!("{:?}", res);
 
 
     app.set_block(BlockInfo {
-        height: 123_47,
+        height: 123_45,
         time: Default::default(),
-        chain_id: "".to_string()
+        chain_id: "".to_string(),
     });
 
     let res = execute_contract(
@@ -207,6 +208,11 @@ fn ico_test() {
     let b = app.wrap().query_balance(ADDR1, "ukrw").unwrap();
     println!("{:?}", b);
 
+    let f: FundingAmountResponse = app.wrap().query_wasm_smart(addr.clone(), &ico::msg::QueryMsg::FundingAmount { addr: ADDR2.to_string() }).unwrap();
+    println!("{:?}", f);
+
+    let i: IsFundingFinishedResponse = app.wrap().query_wasm_smart(addr, &ico::msg::QueryMsg::IsFundingFinished {}).unwrap();
+    println!("{:?}", i);
 }
 
 fn main() {

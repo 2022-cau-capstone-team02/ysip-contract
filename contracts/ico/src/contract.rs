@@ -1,5 +1,5 @@
 use crate::error::ContractError;
-use crate::execute::{end_funding, fund_channel_token, refund};
+use crate::{execute, query};
 use cosmwasm_std::{
     entry_point, to_binary, Addr, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Order, Reply,
     ReplyOn, Response, StdError, StdResult, SubMsg, Uint128, WasmMsg,
@@ -56,17 +56,17 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::FundChannelToken {} => fund_channel_token(deps, env, info),
-        ExecuteMsg::EndFunding {} => end_funding(deps, env, info),
-        ExecuteMsg::Refund {} => refund(deps, env, info),
+        ExecuteMsg::FundChannelToken {} => execute::fund_channel_token(deps, env, info),
+        ExecuteMsg::EndFunding {} => execute::end_funding(deps, env, info),
+        ExecuteMsg::Refund {} => execute::refund(deps, env, info),
     }
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
-        QueryMsg::FundingAmount { addr } => Ok(Binary::default()),
-        QueryMsg::IsFundingFinished {} => Ok(Binary::default())
+        QueryMsg::FundingAmount { addr } => query::funding_amount(deps, &addr),
+        QueryMsg::IsFundingFinished {} => query::funding_finished(deps, env),
     }
 }
 
