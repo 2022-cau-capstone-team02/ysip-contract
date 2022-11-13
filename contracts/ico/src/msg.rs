@@ -28,6 +28,9 @@ pub enum ExecuteMsg {
     TransferFund {
         amount: Uint128,
     },
+    Allocation {
+        amount: Uint128
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

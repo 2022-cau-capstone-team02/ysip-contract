@@ -63,6 +63,7 @@ pub fn execute(
         ExecuteMsg::EndFunding {} => execute::end_funding(deps, env, info),
         ExecuteMsg::Refund {} => execute::refund(deps, env, info),
         ExecuteMsg::TransferFund { amount } => execute::transfer_fund(deps, env, info, amount),
+        ExecuteMsg::Allocation { amount } => execute::allocation(deps, info, amount),
     }
 }
 
@@ -109,7 +110,7 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractEr
                                 inner: format!("{:?}", e),
                             })?,
                     )
-                    .map_err(|_| ContractError::NotFound {})?)
+                        .map_err(|_| ContractError::NotFound {})?)
                 })
                 .collect::<Result<Vec<CosmosMsg>, ContractError>>();
 
@@ -118,10 +119,10 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractEr
 
             Ok(
                 Response::new()
-                .add_attribute("channel_token_instantiate", res.clone().contract_address)
-                .add_attribute("channel_token_mint", config.channel_token_amount)
-                .add_message(mint_msg)
-                .add_messages(transfer_ico_tokens_msgs?)
+                    .add_attribute("channel_token_instantiate", res.clone().contract_address)
+                    .add_attribute("channel_token_mint", config.channel_token_amount)
+                    .add_message(mint_msg)
+                    .add_messages(transfer_ico_tokens_msgs?)
             )
         }
         _ => Err(ContractError::NotFound {}),

@@ -239,6 +239,22 @@ fn ico_test() {
         chain_id: "".to_string(),
     });
 
+    let b = app.wrap().query_balance(ADDR2, "ukrw").unwrap();
+    println!("ADDR2 balance: {:?}", b);
+
+    let res = execute_contract(
+        &mut app,
+        &addr,
+        &ico::msg::ExecuteMsg::Allocation { amount: Uint128::new(100000) },
+        &[coin(100000, "ukrw")],
+        ADDR1,
+    ).unwrap();
+
+    println!("{:?}", res);
+
+    let b = app.wrap().query_balance(ADDR2, "ukrw").unwrap();
+    println!("ADDR2 balance: {:?}", b);
+
 }
 
 fn main() {

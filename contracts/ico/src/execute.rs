@@ -1,11 +1,10 @@
 use crate::contract::END_FUNDING_REPLAY_ID;
 use crate::error::ContractError;
 use crate::state::{CONFIG, FUNDING};
-use cosmwasm_std::{
-    to_binary, CosmosMsg, DepsMut, Env, MessageInfo, ReplyOn, Response,
-    StdError, SubMsg, Uint128, WasmMsg,
-};
-use cw20::{MinterResponse};
+use cosmwasm_std::{to_binary, CosmosMsg, DepsMut, Env, MessageInfo, ReplyOn, Response, StdError, SubMsg, Uint128, WasmMsg, Addr};
+use cw20::{AllAccountsResponse, MinterResponse, TokenInfoResponse};
+use cw20_base::msg::QueryMsg::{AllAccounts, TokenInfo};
+use ysip::querier::query_token_balance;
 use ysip::utils::{get_bank_transfer_to_msg};
 
 pub fn fund_channel_token(
@@ -127,7 +126,7 @@ pub fn end_funding(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Respons
                 funds: vec![],
                 label: format!("{} channel token", config.token_name),
             }
-            .into(),
+                .into(),
             gas_limit: None,
             reply_on: ReplyOn::Success,
         });
@@ -196,6 +195,55 @@ pub fn transfer_fund(
         .add_message(transfer_msg))
 }
 
+pub fn allocation(
+    deps: DepsMut,
+    info: MessageInfo,
+    amount: Uint128,
+) -> Result<Response, ContractError> {
+    let fund = info.funds.iter().find(|coin| coin.denom == "ukrw").expect("coin not found");
+    if fund.amount != amount {
+        return Err(ContractError::InvalidCoinAmount {});
+    }
+
+    let config = CONFIG.load(deps.storage)?;
+
+    let all_accounts: AllAccountsResponse = deps.querier.query_wasm_smart(
+        config.token_contract.clone(),
+        &AllAccounts { start_after: None, limit: None },
+    )?;
+
+    let token_info: TokenInfoResponse = deps.querier.query_wasm_smart(
+        config.token_contract.clone(),
+        &TokenInfo {},
+    )?;
+
+    let total_supply = token_info.total_supply;
+
+    let mut transfer_msgs: Vec<CosmosMsg> = vec![];
+
+    for account in all_accounts.accounts {
+        let balance = query_token_balance(
+            &deps.querier,
+            &config.token_contract,
+            &Addr::unchecked(account.clone()),
+        ).expect("token balance not found");
+
+        if !balance.eq(&Uint128::zero()) {
+            transfer_msgs.push(get_bank_transfer_to_msg(
+                &Addr::unchecked(account),
+                "ukrw",
+                fund.amount.checked_multiply_ratio(balance, total_supply).expect("overflow"),
+            ));
+        }
+    }
+
+    Ok(
+        Response::new()
+            .add_attribute("action", "allocation")
+            .add_messages(transfer_msgs)
+    )
+}
+
 #[cfg(test)]
 mod test_ico {
     use crate::execute::{end_funding, fund_channel_token};
@@ -233,7 +281,7 @@ mod test_ico {
             mock_env(),
             mock_info(ADDR, &[coin(10000, "ukrw")]),
         )
-        .unwrap();
+            .unwrap();
         let funding = FUNDING.load(&deps.storage, Addr::unchecked(ADDR)).unwrap();
 
         let res = end_funding(
@@ -241,6 +289,6 @@ mod test_ico {
             mock_env(),
             mock_info(ADDR, &[coin(10000, "ukrw")]),
         )
-        .unwrap();
+            .unwrap();
     }
 }
