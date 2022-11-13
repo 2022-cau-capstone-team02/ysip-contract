@@ -1,5 +1,4 @@
-use crate::error::ContractError;
-use cosmwasm_std::{Addr, StdResult, Uint128};
+use cosmwasm_std::{Addr, Uint128};
 use cw_storage_plus::{Item, Map};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};

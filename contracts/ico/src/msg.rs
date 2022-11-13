@@ -36,7 +36,6 @@ pub enum QueryMsg {
     FundingAmount { addr: String },
     IsFundingFinished {},
     TokenAddress {},
-    PairContractAddress {}
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

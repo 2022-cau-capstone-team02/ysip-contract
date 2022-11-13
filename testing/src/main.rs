@@ -1,5 +1,5 @@
-use cosmwasm_std::{Addr, BankMsg, BlockInfo, coin, CosmosMsg, Timestamp, Uint128};
-use cw_multi_test::{Executor, next_block};
+use cosmwasm_std::{Addr, BankMsg, BlockInfo, coin, CosmosMsg, Uint128};
+use cw_multi_test::{Executor};
 use testing::execute::{execute_mint, execute_provide_liquidity, execute_remove_liquidity, execute_swap_token_in, increase_allowance};
 use testing::init::{mock_cw20_contract, mock_ico_contract, mock_pair_contract};
 use testing::instantiate::{instantiate_cw20_contract, instantiate_pair_contract};
@@ -233,11 +233,12 @@ fn ico_test() {
     let token_addr: TokenAddressResponse = app.wrap().query_wasm_smart(addr.clone(), &ico::msg::QueryMsg::TokenAddress {}).unwrap();
     println!("{:?}", token_addr);
 
-    let pair_addr: TokenAddressResponse = app.wrap().query_wasm_smart(addr, &ico::msg::QueryMsg::PairContractAddress {}).unwrap();
-    println!("{:?}", pair_addr);
+    app.set_block(BlockInfo {
+        height: 123_49,
+        time: Default::default(),
+        chain_id: "".to_string(),
+    });
 
-    let a = query_cw20_balance(&app, &Addr::unchecked("contract2"), ADDR1);
-    println!("{:?}", a);
 }
 
 fn main() {

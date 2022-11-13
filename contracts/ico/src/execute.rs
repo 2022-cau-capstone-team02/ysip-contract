@@ -2,14 +2,11 @@ use crate::contract::END_FUNDING_REPLAY_ID;
 use crate::error::ContractError;
 use crate::state::{CONFIG, FUNDING};
 use cosmwasm_std::{
-    to_binary, Addr, CosmosMsg, DepsMut, Env, MessageInfo, Order, Reply, ReplyOn, Response,
-    StdError, StdResult, SubMsg, Uint128, WasmMsg,
+    to_binary, CosmosMsg, DepsMut, Env, MessageInfo, ReplyOn, Response,
+    StdError, SubMsg, Uint128, WasmMsg,
 };
-use cw20::{Cw20ExecuteMsg, MinterResponse};
-use cw20_base::state::BALANCES;
-use cw_storage_plus::Bound;
-use ysip::asset::AssetInfo;
-use ysip::utils::{get_bank_transfer_to_msg, get_cw20_transfer_msg};
+use cw20::{MinterResponse};
+use ysip::utils::{get_bank_transfer_to_msg};
 
 pub fn fund_channel_token(
     deps: DepsMut,
