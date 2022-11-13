@@ -29,7 +29,7 @@ pub enum ExecuteMsg {
         amount: Uint128,
     },
     Allocation {
-        amount: Uint128
+        amount: Uint128,
     },
 }
 

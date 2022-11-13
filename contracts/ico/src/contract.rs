@@ -1,7 +1,8 @@
 use crate::error::ContractError;
 use crate::{execute, query};
 use cosmwasm_std::{
-    entry_point, to_binary, Addr, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Order, Reply, Response, StdResult, Uint128, WasmMsg,
+    entry_point, to_binary, Addr, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Order, Reply,
+    Response, StdResult, Uint128, WasmMsg,
 };
 use cw2::set_contract_version;
 use cw20::Cw20ExecuteMsg;
@@ -110,20 +111,18 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractEr
                                 inner: format!("{:?}", e),
                             })?,
                     )
-                        .map_err(|_| ContractError::NotFound {})?)
+                    .map_err(|_| ContractError::NotFound {})?)
                 })
                 .collect::<Result<Vec<CosmosMsg>, ContractError>>();
 
             config.token_contract = Addr::unchecked(res.contract_address.clone());
             CONFIG.save(deps.storage, &config)?;
 
-            Ok(
-                Response::new()
-                    .add_attribute("channel_token_instantiate", res.clone().contract_address)
-                    .add_attribute("channel_token_mint", config.channel_token_amount)
-                    .add_message(mint_msg)
-                    .add_messages(transfer_ico_tokens_msgs?)
-            )
+            Ok(Response::new()
+                .add_attribute("channel_token_instantiate", res.clone().contract_address)
+                .add_attribute("channel_token_mint", config.channel_token_amount)
+                .add_message(mint_msg)
+                .add_messages(transfer_ico_tokens_msgs?))
         }
         _ => Err(ContractError::NotFound {}),
     }

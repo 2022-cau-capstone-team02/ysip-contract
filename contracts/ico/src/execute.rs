@@ -1,11 +1,14 @@
 use crate::contract::END_FUNDING_REPLAY_ID;
 use crate::error::ContractError;
 use crate::state::{CONFIG, FUNDING};
-use cosmwasm_std::{to_binary, CosmosMsg, DepsMut, Env, MessageInfo, ReplyOn, Response, StdError, SubMsg, Uint128, WasmMsg, Addr};
+use cosmwasm_std::{
+    to_binary, Addr, CosmosMsg, DepsMut, Env, MessageInfo, ReplyOn, Response, StdError, SubMsg,
+    Uint128, WasmMsg,
+};
 use cw20::{AllAccountsResponse, MinterResponse, TokenInfoResponse};
 use cw20_base::msg::QueryMsg::{AllAccounts, TokenInfo};
 use ysip::querier::query_token_balance;
-use ysip::utils::{get_bank_transfer_to_msg};
+use ysip::utils::get_bank_transfer_to_msg;
 
 pub fn fund_channel_token(
     deps: DepsMut,
@@ -126,7 +129,7 @@ pub fn end_funding(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Respons
                 funds: vec![],
                 label: format!("{} channel token", config.token_name),
             }
-                .into(),
+            .into(),
             gas_limit: None,
             reply_on: ReplyOn::Success,
         });
@@ -200,7 +203,11 @@ pub fn allocation(
     info: MessageInfo,
     amount: Uint128,
 ) -> Result<Response, ContractError> {
-    let fund = info.funds.iter().find(|coin| coin.denom == "ukrw").expect("coin not found");
+    let fund = info
+        .funds
+        .iter()
+        .find(|coin| coin.denom == "ukrw")
+        .expect("coin not found");
     if fund.amount != amount {
         return Err(ContractError::InvalidCoinAmount {});
     }
@@ -209,13 +216,15 @@ pub fn allocation(
 
     let all_accounts: AllAccountsResponse = deps.querier.query_wasm_smart(
         config.token_contract.clone(),
-        &AllAccounts { start_after: None, limit: None },
+        &AllAccounts {
+            start_after: None,
+            limit: None,
+        },
     )?;
 
-    let token_info: TokenInfoResponse = deps.querier.query_wasm_smart(
-        config.token_contract.clone(),
-        &TokenInfo {},
-    )?;
+    let token_info: TokenInfoResponse = deps
+        .querier
+        .query_wasm_smart(config.token_contract.clone(), &TokenInfo {})?;
 
     let total_supply = token_info.total_supply;
 
@@ -226,22 +235,23 @@ pub fn allocation(
             &deps.querier,
             &config.token_contract,
             &Addr::unchecked(account.clone()),
-        ).expect("token balance not found");
+        )
+        .expect("token balance not found");
 
         if !balance.eq(&Uint128::zero()) {
             transfer_msgs.push(get_bank_transfer_to_msg(
                 &Addr::unchecked(account),
                 "ukrw",
-                fund.amount.checked_multiply_ratio(balance, total_supply).expect("overflow"),
+                fund.amount
+                    .checked_multiply_ratio(balance, total_supply)
+                    .expect("overflow"),
             ));
         }
     }
 
-    Ok(
-        Response::new()
-            .add_attribute("action", "allocation")
-            .add_messages(transfer_msgs)
-    )
+    Ok(Response::new()
+        .add_attribute("action", "allocation")
+        .add_messages(transfer_msgs))
 }
 
 #[cfg(test)]
@@ -281,7 +291,7 @@ mod test_ico {
             mock_env(),
             mock_info(ADDR, &[coin(10000, "ukrw")]),
         )
-            .unwrap();
+        .unwrap();
         let funding = FUNDING.load(&deps.storage, Addr::unchecked(ADDR)).unwrap();
 
         let res = end_funding(
@@ -289,6 +299,6 @@ mod test_ico {
             mock_env(),
             mock_info(ADDR, &[coin(10000, "ukrw")]),
         )
-            .unwrap();
+        .unwrap();
     }
 }
