@@ -26,6 +26,7 @@ pub fn instantiate(
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+    let recipient_addr = deps.api.addr_validate(&msg.recipient)?;
 
     let config = Config {
         admin: info.sender,
@@ -37,8 +38,13 @@ pub fn instantiate(
         current_funding_amount: Uint128::zero(),
         channel_token_amount: Uint128::new(msg.channel_token_amount),
         deadline: msg.deadline,
+        /// token_contract would be replace with the reply msg
         token_contract: Addr::unchecked(""),
+        /// pair_contract would be replace with the reply msg
+        pair_contract: Addr::unchecked(""),
+        recipient: recipient_addr,
         finished: false,
+        is_token_distributed: false,
     };
 
     CONFIG.save(deps.storage, &config)?;
@@ -59,6 +65,7 @@ pub fn execute(
         ExecuteMsg::FundChannelToken {} => execute::fund_channel_token(deps, env, info),
         ExecuteMsg::EndFunding {} => execute::end_funding(deps, env, info),
         ExecuteMsg::Refund {} => execute::refund(deps, env, info),
+        ExecuteMsg::TransferFund { amount } => execute::transfer_fund(deps, env, info, amount),
     }
 }
 
@@ -67,6 +74,8 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::FundingAmount { addr } => query::funding_amount(deps, &addr),
         QueryMsg::IsFundingFinished {} => query::funding_finished(deps, env),
+        QueryMsg::TokenAddress {} => query::token_address(deps),
+        QueryMsg::PairContractAddress {} => query::pair_address(deps)
     }
 }
 
@@ -146,6 +155,8 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractEr
                 .add_submessage(instantiate_lp_msg))
         }
         LP_POOL_INSTANTIATE_ID => {
+            println!("{:?}", res);
+            config.pair_contract = Addr::unchecked(&res.contract_address);
             Ok(Response::new().add_attribute("lp_pool_instantiate", res.contract_address))
         }
         _ => Err(ContractError::NotFound {}),

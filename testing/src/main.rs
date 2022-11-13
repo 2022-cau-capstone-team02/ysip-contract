@@ -4,11 +4,11 @@ use testing::execute::{execute_mint, execute_provide_liquidity, execute_remove_l
 use testing::init::{mock_cw20_contract, mock_ico_contract, mock_pair_contract};
 use testing::instantiate::{instantiate_cw20_contract, instantiate_pair_contract};
 use testing::query::{query_cw20_balance, query_pair_info};
-use testing_base::consts::{ADDR1, ADDR2};
+use testing_base::consts::{ADDR1, ADDR2, ADDR3};
 use testing_base::execute::execute_contract;
 use testing_base::init::init_app;
 use testing_base::instantiate::instantiate_contract;
-use ico::msg::{FundingAmountResponse, IsFundingFinishedResponse};
+use ico::msg::{FundingAmountResponse, IsFundingFinishedResponse, TokenAddressResponse};
 
 fn basic_test() {
     let mut app = init_app(ADDR1);
@@ -150,6 +150,7 @@ fn ico_test() {
         token_name: "channel".to_string(),
         token_symbol: "CHANNEL".to_string(),
         channel_token_amount: 1000000,
+        recipient: ADDR3.to_string()
     };
 
     app.execute(
@@ -180,18 +181,21 @@ fn ico_test() {
 
     println!("{:?}", res);
 
+    let token_addr: TokenAddressResponse = app.wrap().query_wasm_smart(addr.clone(), &ico::msg::QueryMsg::TokenAddress {}).unwrap();
+    println!("{:?}", token_addr);
+
     let res = execute_contract(
         &mut app,
         &addr,
         &ico::msg::ExecuteMsg::FundChannelToken {},
-        &[coin(240, "ukrw")],
+        &[coin(250, "ukrw")],
         ADDR2,
     ).unwrap();
     println!("{:?}", res);
 
 
     app.set_block(BlockInfo {
-        height: 123_45,
+        height: 123_47,
         time: Default::default(),
         chain_id: "".to_string(),
     });
@@ -211,8 +215,29 @@ fn ico_test() {
     let f: FundingAmountResponse = app.wrap().query_wasm_smart(addr.clone(), &ico::msg::QueryMsg::FundingAmount { addr: ADDR2.to_string() }).unwrap();
     println!("{:?}", f);
 
-    let i: IsFundingFinishedResponse = app.wrap().query_wasm_smart(addr, &ico::msg::QueryMsg::IsFundingFinished {}).unwrap();
+    let i: IsFundingFinishedResponse = app.wrap().query_wasm_smart(addr.clone(), &ico::msg::QueryMsg::IsFundingFinished {}).unwrap();
     println!("{:?}", i);
+
+    let res = execute_contract(
+        &mut app,
+        &addr,
+        &ico::msg::ExecuteMsg::TransferFund { amount: Uint128::new(500) },
+        &[],
+        ADDR1,
+    ).unwrap();
+    println!("{:?}", res);
+
+    let b = app.wrap().query_balance(ADDR3, "ukrw").unwrap();
+    println!("{:?}", b);
+
+    let token_addr: TokenAddressResponse = app.wrap().query_wasm_smart(addr.clone(), &ico::msg::QueryMsg::TokenAddress {}).unwrap();
+    println!("{:?}", token_addr);
+
+    let pair_addr: TokenAddressResponse = app.wrap().query_wasm_smart(addr, &ico::msg::QueryMsg::PairContractAddress {}).unwrap();
+    println!("{:?}", pair_addr);
+
+    let a = query_cw20_balance(&app, &Addr::unchecked("contract2"), ADDR1);
+    println!("{:?}", a);
 }
 
 fn main() {

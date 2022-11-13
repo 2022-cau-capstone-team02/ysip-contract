@@ -23,4 +23,7 @@ pub enum ContractError {
 
     #[error("{inner}")]
     Generic { inner: String },
+
+    #[error("Token already distributed")]
+    TokenAlreadyDistributed {},
 }

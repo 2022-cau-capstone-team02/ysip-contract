@@ -95,7 +95,10 @@ pub fn fund_channel_token(
 }
 
 pub fn end_funding(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
-    let config = CONFIG.load(deps.storage)?;
+    let mut config = CONFIG.load(deps.storage)?;
+    if config.is_token_distributed {
+        return Err(ContractError::TokenAlreadyDistributed {});
+    }
 
     if !config.is_finished() && env.block.height < config.deadline {
         return Err(ContractError::FundingNotFinished {});
@@ -133,6 +136,10 @@ pub fn end_funding(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Respons
         });
     }
 
+    config.is_token_distributed = true;
+
+    CONFIG.save(deps.storage, &config)?;
+
     Ok(Response::new()
         .add_attribute("action", "end_funding")
         .add_submessages(sub_msg))
@@ -168,6 +175,30 @@ pub fn refund(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, Co
         .add_messages(msgs))
 }
 
+pub fn transfer_fund(
+    deps: DepsMut,
+    _env: Env,
+    info: MessageInfo,
+    amount: Uint128,
+) -> Result<Response, ContractError> {
+    let config = CONFIG.load(deps.storage)?;
+    if config.admin != info.sender {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    if !config.is_finished() {
+        return Err(ContractError::FundingNotFinished {});
+    }
+
+    let transfer_msg = get_bank_transfer_to_msg(&config.recipient, "ukrw", amount);
+
+    Ok(Response::new()
+        .add_attribute("action", "transfer_fund")
+        .add_attribute("to", config.recipient)
+        .add_attribute("amount", amount)
+        .add_message(transfer_msg))
+}
+
 #[cfg(test)]
 mod test_ico {
     use crate::execute::{end_funding, fund_channel_token};
@@ -195,6 +226,7 @@ mod test_ico {
                     deadline: 12_346,
                     finished: false,
                     token_contract: Addr::unchecked(""),
+                    recipient: Addr::unchecked(ADDR),
                 },
             )
             .unwrap();

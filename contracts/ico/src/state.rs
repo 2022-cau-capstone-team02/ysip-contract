@@ -20,6 +20,11 @@ pub struct Config {
     pub deadline: u64,
     pub finished: bool,
     pub token_contract: Addr,
+    pub pair_contract: Addr,
+    /// recipient who is getting fund
+    pub recipient: Addr,
+    /// is token already distributed after fund
+    pub is_token_distributed: bool,
 }
 
 impl Config {
