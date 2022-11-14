@@ -1,13 +1,13 @@
+use cosmwasm_schema::{export_schema, remove_schemas};
+use schemars::schema_for;
 use std::env::current_dir;
 use std::fs::create_dir_all;
-use schemars::schema_for;
-use cosmwasm_schema::{export_schema, remove_schemas};
 
-use cw20_base::msg::{InstantiateMsg, ExecuteMsg, QueryMsg};
 use cw20::{
-    BalanceResponse, Cw20ReceiveMsg, DownloadLogoResponse, MarketingInfoResponse, MinterResponse, TokenInfoResponse,
-    AllowanceResponse, AllAllowancesResponse, AllAccountsResponse,
+    AllAccountsResponse, AllAllowancesResponse, AllowanceResponse, BalanceResponse, Cw20ReceiveMsg,
+    DownloadLogoResponse, MarketingInfoResponse, MinterResponse, TokenInfoResponse,
 };
+use cw20_base::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 
 fn main() {
     let mut out_dir = current_dir().unwrap();
