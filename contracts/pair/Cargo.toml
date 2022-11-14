@@ -24,6 +24,7 @@ thiserror = { version = "1.0.37"}
 cw-storage-plus = "0.16.0"
 cw-utils = "0.13.4"
 ysip = { path = "../../packages/ysip", default-features = false }
+cosmwasm-schema = "1.1.5"
 
 [dev-dependencies]
 cosmwasm-vm = { version = "1.0", default-features = false, features = ["iterator"] }
