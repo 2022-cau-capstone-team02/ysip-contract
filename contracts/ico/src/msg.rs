@@ -10,7 +10,7 @@ pub struct InstantiateMsg {
     pub token_code_id: u64,
     pub token_name: String,
     pub token_symbol: String,
-    pub channel_token_amount: u128,
+    pub channel_token_amount: Uint128,
     /// recipient who is getting fund
     pub recipient: String,
 }

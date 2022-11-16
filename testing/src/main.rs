@@ -147,7 +147,7 @@ fn ico_test() {
         token_code_id: channel_a_code_id,
         token_name: "channel".to_string(),
         token_symbol: "CHANNEL".to_string(),
-        channel_token_amount: 1000000,
+        channel_token_amount: Uint128::new(1000000),
         recipient: ADDR3.to_string()
     };
 
