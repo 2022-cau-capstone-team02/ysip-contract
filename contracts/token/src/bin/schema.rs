@@ -4,7 +4,7 @@ use std::env::current_dir;
 use std::fs::create_dir_all;
 
 use cw20::{
-    AllAccountsResponse, AllAllowancesResponse, AllowanceResponse, BalanceResponse, Cw20ReceiveMsg,
+    AllAccountsResponse, AllAllowancesResponse, AllowanceResponse, BalanceResponse,
     DownloadLogoResponse, MarketingInfoResponse, MinterResponse, TokenInfoResponse,
 };
 use cw20_base::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};

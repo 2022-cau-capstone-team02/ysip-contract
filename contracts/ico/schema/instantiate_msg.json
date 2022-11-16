@@ -5,7 +5,6 @@
   "required": [
     "channel_token_amount",
     "deadline",
-    "pair_code_id",
     "recipient",
     "target_funding",
     "token_code_id",
@@ -20,11 +19,6 @@
     },
     "deadline": {
       "description": "block height for deadline",
-      "type": "integer",
-      "format": "uint64",
-      "minimum": 0.0
-    },
-    "pair_code_id": {
       "type": "integer",
       "format": "uint64",
       "minimum": 0.0
