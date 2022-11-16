@@ -13,9 +13,7 @@
   ],
   "properties": {
     "channel_token_amount": {
-      "type": "integer",
-      "format": "uint128",
-      "minimum": 0.0
+      "$ref": "#/definitions/Uint128"
     },
     "deadline": {
       "description": "block height for deadline",
