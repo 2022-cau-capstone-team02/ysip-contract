@@ -29,7 +29,6 @@ pub fn instantiate(
     let config = Config {
         admin: info.sender,
         token_code_id: msg.token_code_id,
-        pair_code_id: msg.pair_code_id,
         token_name: msg.token_name.to_string(),
         token_symbol: msg.token_symbol.to_string(),
         target_funding_amount: msg.target_funding,

@@ -8,7 +8,6 @@ pub struct InstantiateMsg {
     /// block height for deadline
     pub deadline: u64,
     pub token_code_id: u64,
-    pub pair_code_id: u64,
     pub token_name: String,
     pub token_symbol: String,
     pub channel_token_amount: u128,
