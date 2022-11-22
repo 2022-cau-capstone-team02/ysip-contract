@@ -37,6 +37,7 @@ pub enum ExecuteMsg {
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     FundingAmount { addr: String },
+    TotalFundingAmount {},
     IsFundingFinished {},
     TokenAddress {},
 }
@@ -45,6 +46,12 @@ pub enum QueryMsg {
 #[serde(rename_all = "snake_case")]
 pub struct FundingAmountResponse {
     pub amount: Uint128,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct TotalFundingAmountResponse {
+    pub amount: Uint128
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

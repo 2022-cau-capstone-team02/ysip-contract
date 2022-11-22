@@ -72,6 +72,7 @@ pub fn execute(
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::FundingAmount { addr } => query::funding_amount(deps, &addr),
+        QueryMsg::TotalFundingAmount {} => query::total_funding_amount(deps),
         QueryMsg::IsFundingFinished {} => query::funding_finished(deps, env),
         QueryMsg::TokenAddress {} => query::token_address(deps),
     }

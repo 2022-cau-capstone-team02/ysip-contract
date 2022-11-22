@@ -1,11 +1,22 @@
-use crate::msg::{FundingAmountResponse, IsFundingFinishedResponse, TokenAddressResponse};
+use crate::msg::{FundingAmountResponse, IsFundingFinishedResponse, TokenAddressResponse, TotalFundingAmountResponse};
 use crate::state::{CONFIG, FUNDING};
-use cosmwasm_std::{to_binary, Binary, Deps, Env, StdResult};
+use cosmwasm_std::{to_binary, Binary, Deps, Env, StdResult, Order, Addr, Uint128};
+use crate::msg::QueryMsg::TotalFundingAmount;
 
 pub fn funding_amount(deps: Deps, addr: &str) -> StdResult<Binary> {
     let address = deps.api.addr_validate(addr)?;
     let funding = FUNDING.load(deps.storage, address)?;
     Ok(to_binary(&FundingAmountResponse { amount: funding })?)
+}
+
+pub fn total_funding_amount(deps: Deps) -> StdResult<Binary> {
+    let funding: Uint128 = FUNDING.range(deps.storage, None, None, Order::Descending)
+        .into_iter()
+        .filter_map(|val| val.ok())
+        .map(|val| val.1)
+        .sum();
+
+    Ok(to_binary(&TotalFundingAmountResponse {amount: funding})?)
 }
 
 pub fn funding_finished(deps: Deps, env: Env) -> StdResult<Binary> {

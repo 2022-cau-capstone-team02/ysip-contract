@@ -8,7 +8,7 @@ use testing_base::consts::{ADDR1, ADDR2, ADDR3};
 use testing_base::execute::execute_contract;
 use testing_base::init::init_app;
 use testing_base::instantiate::instantiate_contract;
-use ico::msg::{FundingAmountResponse, IsFundingFinishedResponse, TokenAddressResponse};
+use ico::msg::{FundingAmountResponse, IsFundingFinishedResponse, QueryMsg, TokenAddressResponse, TotalFundingAmountResponse};
 
 fn basic_test() {
     let mut app = init_app(ADDR1);
@@ -254,6 +254,9 @@ fn ico_test() {
 
     let b = app.wrap().query_balance(ADDR2, "ukrw").unwrap();
     println!("ADDR2 balance: {:?}", b);
+
+    let res: TotalFundingAmountResponse = app.wrap().query_wasm_smart(addr, &QueryMsg::TotalFundingAmount {}).unwrap();
+    println!("{:?}", res);
 
 }
 
