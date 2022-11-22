@@ -29,12 +29,11 @@ pub fn instantiate(
     let config = Config {
         admin: info.sender,
         token_code_id: msg.token_code_id,
-        pair_code_id: msg.pair_code_id,
         token_name: msg.token_name.to_string(),
         token_symbol: msg.token_symbol.to_string(),
         target_funding_amount: msg.target_funding,
         current_funding_amount: Uint128::zero(),
-        channel_token_amount: Uint128::new(msg.channel_token_amount),
+        channel_token_amount: msg.channel_token_amount,
         deadline: msg.deadline,
         /// token_contract would be replace with the reply msg
         token_contract: Addr::unchecked(""),

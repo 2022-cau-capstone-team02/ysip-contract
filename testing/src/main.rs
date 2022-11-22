@@ -138,7 +138,6 @@ fn basic_test() {
 fn ico_test() {
     let mut app = init_app(ADDR1);
     let channel_a_code_id = app.store_code(mock_cw20_contract());
-    let pair_code_id = app.store_code(mock_pair_contract());
 
     let ico_code_id = app.store_code(mock_ico_contract());
 
@@ -146,10 +145,9 @@ fn ico_test() {
         target_funding: Uint128::new(500),
         deadline: 123_46,
         token_code_id: channel_a_code_id,
-        pair_code_id,
         token_name: "channel".to_string(),
         token_symbol: "CHANNEL".to_string(),
-        channel_token_amount: 1000000,
+        channel_token_amount: Uint128::new(1000000),
         recipient: ADDR3.to_string()
     };
 

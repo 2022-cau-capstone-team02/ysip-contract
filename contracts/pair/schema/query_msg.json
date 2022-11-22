@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "QueryMsg",
+  "oneOf": [
+    {
+      "type": "object",
+      "required": [
+        "pair_info"
+      ],
+      "properties": {
+        "pair_info": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "liquidity"
+      ],
+      "properties": {
+        "liquidity": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": false
+    }
+  ]
+}

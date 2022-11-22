@@ -9,7 +9,7 @@ edition = "2021"
 crate-type = ["cdylib", "rlib"]
 
 [features]
-backtraces = ["cosmwasm-std/backtraces"]
+backtraces = ["cosmwasm-std/backtraces", "cosmwasm-vm/backtraces"]
 # use library feature to disable all init/handle/query exports
 library = []
 
@@ -25,6 +25,7 @@ serde = { version = "1.0.145", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0.37"}
 ysip = {path = "../../packages/ysip"}
 pair = {path = "../pair"}
+cosmwasm-schema = "1.1.2"
 
 [dev-dependencies]
-cosmwasm-schema = "1.1.2"
+cosmwasm-vm = { version = "1.0", default-features = false, features = ["iterator"] }

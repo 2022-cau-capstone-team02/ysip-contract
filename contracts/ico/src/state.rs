@@ -8,8 +8,6 @@ pub struct Config {
     pub admin: Addr,
     /// code_id for channel token contract
     pub token_code_id: u64,
-    /// code_id for pair contract
-    pub pair_code_id: u64,
     pub token_name: String,
     pub token_symbol: String,
     pub target_funding_amount: Uint128,
