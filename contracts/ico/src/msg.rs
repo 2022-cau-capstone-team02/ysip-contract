@@ -35,6 +35,7 @@ pub enum ExecuteMsg {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
+    IcoInfo {},
     FundingAmount { addr: String },
     TotalFundingAmount {},
     IsFundingFinished {},
@@ -50,7 +51,7 @@ pub struct FundingAmountResponse {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct TotalFundingAmountResponse {
-    pub amount: Uint128
+    pub amount: Uint128,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -69,4 +70,14 @@ pub struct TokenAddressResponse {
 #[serde(rename_all = "snake_case")]
 pub struct PairAddressResponse {
     pub address: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct IcoInfoResponse {
+    pub admin: String,
+    pub token_name: String,
+    pub token_symbol: String,
+    pub target_funding_amount: Uint128,
+    pub deadline: u64,
 }

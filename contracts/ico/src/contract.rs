@@ -70,6 +70,7 @@ pub fn execute(
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
+        QueryMsg::IcoInfo {} => query::ico_info(deps),
         QueryMsg::FundingAmount { addr } => query::funding_amount(deps, &addr),
         QueryMsg::TotalFundingAmount {} => query::total_funding_amount(deps),
         QueryMsg::IsFundingFinished {} => query::funding_finished(deps, env),
