@@ -84,7 +84,7 @@ pub fn instantiate(
             funds: vec![],
             label: "YSIP LP token".to_string(),
         }
-        .into(),
+            .into(),
         gas_limit: None,
         reply_on: ReplyOn::Success,
     };
@@ -276,13 +276,17 @@ fn swap(
         )),
     };
 
-    msgs.push(get_fee_transfer_msg(
-        &fees.protocol_fee_recipient,
-        Asset {
-            info: offer_pool.info.clone(),
-            amount: protocol_fee_amount,
-        },
-    )?);
+    if let AssetInfo::NativeToken { denom } = params.offer_asset.info {
+        if denom == "ukrw" {
+            msgs.push(get_fee_transfer_msg(
+                &fees.protocol_fee_recipient,
+                Asset {
+                    info: offer_pool.info.clone(),
+                    amount: protocol_fee_amount,
+                },
+            )?);
+        }
+    };
 
     println!(
         "liquidity before swap: {:?}",
